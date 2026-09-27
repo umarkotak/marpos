@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  agentRules: false,
   reactStrictMode: true,
+  async rewrites() {
+    return [...["/pos", "/products", "/orders", "/finance", "/audit-log", "/reports", "/reports/comparison", "/reports/day/:date", "/team", "/settings", "/stores"].map((source)=>({source,destination:"/"})), { source: "/backend/:path*", destination: `${process.env.API_ORIGIN || "http://localhost:6010"}/marpos/api/:path*` }];
+  },
+  async headers() {
+    return [{source:"/sw.js",headers:[{key:"Cache-Control",value:"no-cache, no-store, must-revalidate"}]}];
+  },
+  devIndicators: false,
 };
 
 export default nextConfig;

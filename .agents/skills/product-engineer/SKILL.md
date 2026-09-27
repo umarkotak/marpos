@@ -14,8 +14,8 @@ For POS work, read only the relevant sections of `offline_first_pos_architecture
 Current product decisions:
 
 - One client can have multiple stores. Each store works independently and has one register in V1. There is no shared management across stores.
-- First login needs the server and uses Google authentication. There is no cashier PIN. A previously authenticated register must continue checkout during an outage.
-- Use `IDR` as the currency code. Each store can set its tax percentage. Do not invent a tax rounding rule.
+- First login needs the server and uses Google authentication. There is no cashier PIN. Allow offline checkout for 30 days after the last successful online login; require online login after that.
+- Use `IDR` as the currency code. Each store sets `tax_percentage` from 0 to 100. Add tax at checkout by default. Let the cashier exclude tax for a sale with a toggle. Save the applied tax choice and rate with the sale. Do not invent a tax rounding rule.
 
 Preserve these product requirements:
 

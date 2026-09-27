@@ -19,3 +19,7 @@ func Response(c fiber.Ctx, statusCode int, data any) error {
 	}
 	return c.Status(statusCode).JSON(ResponseBody{Data: data, Success: true, Error: ErrorData{}})
 }
+
+func Failure(c fiber.Ctx, statusCode int, code, message string) error {
+	return c.Status(statusCode).JSON(ResponseBody{Data: map[string]any{}, Success: false, Error: ErrorData{Code: code, Message: message}})
+}
