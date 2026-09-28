@@ -1,2 +1,4 @@
 .env
 marpos-api
+/storage/*
+!/storage/README.md

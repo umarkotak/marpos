@@ -14,6 +14,7 @@ import (
 	"github.com/umarkotak/marpos/apps/api/handlers/audit_handler"
 	"github.com/umarkotak/marpos/apps/api/handlers/auth_handler"
 	"github.com/umarkotak/marpos/apps/api/handlers/finance_handler"
+	"github.com/umarkotak/marpos/apps/api/handlers/image_handler"
 	"github.com/umarkotak/marpos/apps/api/handlers/ping_handler"
 	"github.com/umarkotak/marpos/apps/api/handlers/product_handler"
 	"github.com/umarkotak/marpos/apps/api/handlers/sale_handler"
@@ -45,11 +46,13 @@ func newApp() *fiber.App {
 	app := fiber.New(fiber.Config{
 		JSONEncoder: sonic.Marshal,
 		JSONDecoder: sonic.Unmarshal,
+		BodyLimit:   9 << 20,
 	})
 	app.Use(requestid.New(), recover.New())
 	api := app.Group("/marpos/api")
 	api.Get("/ping", ping_handler.Ping)
 	api.Get("/auth/config", auth_handler.Config)
+	api.Get("/images/:store_id/:name", image_handler.Get)
 	api.Post("/auth/google", auth_handler.Google)
 	private := api.Group("", auth_handler.Require)
 	private.Get("/auth/me", auth_handler.Me)
@@ -64,6 +67,7 @@ func newApp() *fiber.App {
 	private.Put("/stores/:store_id/members/:user_id", store_handler.SetMemberRole)
 	private.Delete("/stores/:store_id/members/:user_id", store_handler.RemoveMember)
 	private.Get("/stores/:store_id/products", product_handler.List)
+	private.Post("/stores/:store_id/images", image_handler.Upload)
 	private.Post("/stores/:store_id/products", product_handler.Save)
 	private.Put("/stores/:store_id/products/:product_id", product_handler.Save)
 	private.Delete("/stores/:store_id/products/:product_id", product_handler.Delete)

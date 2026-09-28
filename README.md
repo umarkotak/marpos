@@ -17,6 +17,7 @@ The app can save sales when the internet or API is unavailable. The first Google
 - [Node.js](https://nodejs.org/en/download) 20.9 or newer and [Bun](https://bun.sh/docs/installation). The web app uses Bun 1.3.14 in `package.json`.
 - [PostgreSQL](https://www.postgresql.org/download/) running locally. Create the database manually and give your database user permission to apply migrations.
 - [Just](https://github.com/casey/just#installation) to run the root `justfile`.
+- [FFmpeg](https://ffmpeg.org/download.html) with the `libsvtav1` encoder to convert product images to AVIF. Check with `ffmpeg -encoders | grep libsvtav1`.
 - A [Google OAuth client ID for a web application](https://developers.google.com/identity/oauth2/web/guides/get-google-api-clientid) to sign in.
 
 ## Set up the database and API
@@ -31,6 +32,8 @@ Edit `apps/api/.env`:
 
 - Set `DB_URL` to your PostgreSQL server and the database you want to create.
 - Set `GOOGLE_CLIENT_ID` to your Google web client ID.
+- Set `STORAGE_DIR` if the API does not run from `apps/api`. The default `storage` writes to `apps/api/storage` when you use `just run`.
+- Set `IMAGE_CACHE_DAYS` to change the browser image cache period. The default is 7 days.
 
 The example `DB_URL` uses the user and password `admin123` and port `5432`. Change it if your local PostgreSQL server uses different details. Add `http://localhost:6011` to the Google client's **Authorized JavaScript origins**. The API can start without `GOOGLE_CLIENT_ID`, but sign-in will not work.
 
@@ -67,6 +70,12 @@ Sign in and load the product catalog while online first. Open Marpos at `http://
 You can complete cash sales in the same browser when the API, web server, or internet is unavailable. The browser saves sales on this device and shows a pending count. It retries sync when the API returns. Keep this device and browser until the pending count reaches zero. Do not clear browser site data while sales are pending.
 
 Product and store changes need an online API connection. Offline checkout stops when the 30-day sign-in period expires; sign in online again to renew it.
+
+## Product images
+
+Apply migration `000007` with `just migrate-up` before you add product images. In **Products**, select up to 10 images per product. The first image appears in the catalog. The API accepts JPEG, PNG, GIF, WebP, and AVIF files up to 8 MB each. It converts each file to AVIF and saves it under `apps/api/storage`. The public image URL uses `/backend/images/{store_id}/{image_id}.avif` in the web app and `/marpos/api/images/{store_id}/{image_id}.avif` on the API. Uploaded files are ignored by Git. Back up this directory with the database, and use a persistent disk when you deploy the API.
+
+The web app caches loaded images for the `IMAGE_CACHE_DAYS` period. It checks for a fresh image after that period when online. If the server is offline, it can still show the saved image. Product image uploads need the API online.
 
 ## Costs, income, expenses, and reports
 

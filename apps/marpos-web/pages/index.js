@@ -15,7 +15,7 @@ import { markFinanceSynced, pendingFinance } from "@/lib/local-db";
 import { OrdersPage, PrintReceipt, StoreManagement, TeamPage } from "@/components/pos-pages";
 
 const money = (value) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
-const newProduct = () => ({ name: "", sku: "", price: "", cost_breakdown: [], addon_groups: [] });
+const newProduct = () => ({ name: "", sku: "", price: "", cost_breakdown: [], addon_groups: [], image_urls: [] });
 const newGroup = () => ({ name: "", selection_mode: "single", required: false, options: [{ name: "", price_delta: "0", cost_delta: "0" }] });
 
 async function api(path, options = {}) {
@@ -29,9 +29,23 @@ async function api(path, options = {}) {
   return result.data;
 }
 
-function ProductForm({ product, onSave, onCancel, busy }) {
-  const [form, setForm] = useState(product ? {...product,cost_breakdown:product.cost_breakdown||[]} : newProduct());
-  useEffect(() => setForm(product ? {...product,cost_breakdown:product.cost_breakdown||[]} : newProduct()), [product]);
+function ProductForm({ product, storeID, onSave, onCancel, onNotice, busy }) {
+  const [form, setForm] = useState(product ? {...product,cost_breakdown:product.cost_breakdown||[],image_urls:product.image_urls||[]} : newProduct());
+  const [uploading,setUploading]=useState(false);
+  useEffect(() => setForm(product ? {...product,cost_breakdown:product.cost_breakdown||[],image_urls:product.image_urls||[]} : newProduct()), [product]);
+  async function addImages(event) {
+    const files=Array.from(event.target.files||[]);event.target.value="";
+    if(form.image_urls.length+files.length>10){onNotice("Use at most 10 images per product.");return;}
+    setUploading(true);
+    try {
+      for(const file of files){
+        if(file.size>8*1024*1024){onNotice("Choose an image smaller than 8 MB.");continue;}
+        const body=new FormData();body.append("image",file);
+        try{const result=await api(`/stores/${storeID}/images`,{method:"POST",body,headers:{},signal:AbortSignal.timeout(45000)});setForm((old)=>({...old,image_urls:[...old.image_urls,result.url]}));}
+        catch(error){onNotice(error.message);}
+      }
+    } finally {setUploading(false);}
+  }
   function groupChange(index, change) {
     setForm((old) => ({ ...old, addon_groups: old.addon_groups.map((group, i) => i === index ? { ...group, ...change } : group) }));
   }
@@ -48,6 +62,8 @@ function ProductForm({ product, onSave, onCancel, busy }) {
       <label>SKU<input required value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="COFFEE-01" /></label>
       <label>Price (IDR)<input required type="number" min="0" step="1" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
     </div>
+    <div className="section-row"><div><strong>Product images</strong><p>Add up to 10 images. The first image appears in the catalog.</p></div><label className="button secondary image-upload">{uploading?"Uploading…":"Add images"}<input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" multiple disabled={uploading||busy||form.image_urls.length>=10} onChange={addImages}/></label></div>
+    {!!form.image_urls.length&&<div className="product-images">{form.image_urls.map((url,index)=><div key={url}><img src={url} alt={`${form.name||"Product"} image ${index+1}`}/><button type="button" className="icon-button danger" aria-label={`Remove image ${index+1}`} onClick={()=>setForm((old)=>({...old,image_urls:old.image_urls.filter((item)=>item!==url)}))}><X size={16}/></button>{index===0&&<small>Catalog image</small>}</div>)}</div>}
     <div className="section-row"><div><strong>Production cost per unit</strong><p>List materials, packaging, and other unit costs in IDR.</p></div><button type="button" className="button secondary" onClick={()=>setForm({...form,cost_breakdown:[...form.cost_breakdown,{name:"",amount:"0"}]})}>Add cost</button></div>
     {form.cost_breakdown.map((cost,i)=><div className="option-fields" key={i}><label>Cost item<input required maxLength={100} value={cost.name} onChange={(e)=>setForm({...form,cost_breakdown:form.cost_breakdown.map((row,j)=>j===i?{...row,name:e.target.value}:row)})} /></label><label>Cost (IDR)<input required type="number" min="0" max="1000000000000" step="1" value={cost.amount} onChange={(e)=>setForm({...form,cost_breakdown:form.cost_breakdown.map((row,j)=>j===i?{...row,amount:e.target.value}:row)})} /></label><button type="button" className="icon-button danger" aria-label="Remove cost" onClick={()=>setForm({...form,cost_breakdown:form.cost_breakdown.filter((_,j)=>j!==i)})}><X size={17}/></button></div>)}
     <p>Total unit cost: <strong>{money(form.cost_breakdown.reduce((sum,cost)=>sum+Number(cost.amount),0))}</strong>. No items means zero cost.</p>
@@ -67,7 +83,7 @@ function ProductForm({ product, onSave, onCancel, busy }) {
       </div>)}
       <button type="button" className="link-button" onClick={() => groupChange(i, { options: [...group.options, { name: "", price_delta: "0", cost_delta: "0" }] })}><Plus size={15} /> Add option</button>
     </div>)}
-    <div className="form-actions"><button type="button" className="button secondary" onClick={onCancel}>Cancel</button><button className="button primary" disabled={busy}>{busy ? "Saving..." : product?.id ? "Save product" : "Create product"}</button></div>
+    <div className="form-actions"><button type="button" className="button secondary" disabled={uploading} onClick={onCancel}>Cancel</button><button className="button primary" disabled={busy||uploading}>{busy ? "Saving..." : product?.id ? "Save product" : "Create product"}</button></div>
   </form>;
 }
 
@@ -477,7 +493,7 @@ export default function Home() {
       <RegisterSidebar auth={auth} stores={stores} invitations={invitations} tab={tab} setTab={setTab} setEditing={setEditing} onStore={selectStore} />
       <SidebarInset className="app-main">
       <header className="topbar"><div className="topbar-left"><SidebarTrigger /><Separator orientation="vertical" className="h-5" /><div className="topbar-title"><strong>{{pos:"Point of sale",products:"Products",orders:"Order history",team:"Team",settings:"Store settings",stores:"Manage stores",finance:"Income and expenses",reports:"Reports",audit:"Audit log"}[tab]}</strong><small>{auth.store_name}</small></div></div><div className="topbar-right"><span className={online ? "signal online" : "signal"}><span className="dot" />{online ? "Connected" : "Offline"}</span><span className="pending"><CloudUpload size={16} />{pending} pending</span><Button variant="ghost" size="sm" onClick={logout} title="Sign out"><LogOut size={16} /><span className="sign-out-label">Sign out</span></Button></div></header>
-      {tab === "pos" ? <div className="pos-layout"><section className="catalog"><div className="page-heading"><small>CHECKOUT</small><h1>Point of sale</h1><p>Choose products to start a sale.</p></div><label className="search">Search products<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or SKU" /></label><div className="product-grid">{filtered.map((product) => <button className="product-card" key={product.id} onClick={() => chooseProduct(product)}><span className="product-icon">{product.name.slice(0, 1).toUpperCase()}</span><strong>{product.name}</strong><small>{product.sku}</small><b>{money(product.price)}</b>{product.addon_groups.length > 0 && <em>Add-ons available</em>}</button>)}</div>{filtered.length === 0 && <div className="empty"><Package size={30} /><strong>No products found</strong><p>Add a product in the Products page.</p></div>}</section>
+      {tab === "pos" ? <div className="pos-layout"><section className="catalog"><div className="page-heading"><small>CHECKOUT</small><h1>Point of sale</h1><p>Choose products to start a sale.</p></div><label className="search">Search products<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or SKU" /></label><div className="product-grid">{filtered.map((product) => <button className="product-card" key={product.id} onClick={() => chooseProduct(product)}>{product.image_urls?.[0]?<img className="product-photo" src={product.image_urls[0]} alt=""/>:<span className="product-icon">{product.name.slice(0, 1).toUpperCase()}</span>}<strong>{product.name}</strong><small>{product.sku}</small><b>{money(product.price)}</b>{product.addon_groups.length > 0 && <em>Add-ons available</em>}</button>)}</div>{filtered.length === 0 && <div className="empty"><Package size={30} /><strong>No products found</strong><p>Add a product in the Products page.</p></div>}</section>
         <aside className="cart"><div className="cart-head"><div><h2>Current sale</h2><p>{cart.length} items</p></div><ShoppingCart size={22} /></div><div className="draft-orders"><div className="heading-row"><strong>Open orders</strong><button className="button secondary" disabled={!draftOrders.ready||checkingOut} onClick={draftOrders.start}>{cart.length?"Hold and start new":"New order"}</button></div><small>{draftOrders.saving?"Saving draft…":"Drafts save on this device."}</small><div className="draft-list">{draftOrders.drafts.map((row,index)=><div key={row.id}><button className={row.id===draftOrders.activeID?"active":""} disabled={checkingOut} onClick={()=>draftOrders.resume(row.id)}>{row.buyer.buyer_name||row.buyer.buyer_phone||row.buyer.buyer_email||`Order ${index+1}`} <small>{row.items.length} items</small></button><button aria-label="Discard held order" disabled={checkingOut} onClick={()=>draftOrders.discard(row.id)}>×</button></div>)}</div></div><BuyerFields buyer={buyer} onChange={setBuyer} disabled={!draftOrders.ready||checkingOut}/><div className="cart-items">{cart.length === 0 ? <div className="empty"><ShoppingCart size={30} /><strong>Your cart is empty</strong><p>Select a product to add it.</p></div> : cart.map((item) => <div className="cart-item" key={item.id}><div className="item-head"><strong>{item.product_name}</strong><button className="icon-button danger" aria-label="Remove item" onClick={() => setCart((old) => old.filter((entry) => entry.id !== item.id))}><X size={16} /></button></div>{item.addons.map((addon) => <small key={addon.id}>+ {addon.option_name}{addon.price_delta ? ` (${money(addon.price_delta)})` : ""}</small>)}<div className="item-foot"><div className="quantity"><button onClick={() => changeQuantity(item.id, -1)} aria-label="Decrease quantity"><Minus size={14} /></button>{item.quantity}<button onClick={() => changeQuantity(item.id, 1)} aria-label="Increase quantity"><Plus size={14} /></button></div><strong>{money(item.line_total)}</strong></div></div>)}</div><div className="totals"><div><span>Subtotal</span><strong>{money(subtotal)}</strong></div><label className="tax-switch"><span>Include tax ({auth.tax_percentage}%)</span><input type="checkbox" checked={taxOn} onChange={(e) => setTaxOn(e.target.checked)} /></label><div><span>Tax</span><strong>{money(tax)}</strong></div><div className="total"><span>Total</span><strong>{money(total)}</strong></div><button className="button primary checkout" disabled={!cart.length || !db || !draftOrders.ready || checkingOut} onClick={checkout}>Complete cash sale <span>{money(total)}</span></button>{lastReceipt && <button className="button secondary" onClick={() => printReceipt(lastReceipt)}>Print last receipt</button>}<small>Sales save on this device first.</small></div></aside></div> :
         tab === "orders" ? <OrdersPage api={api} db={db} auth={auth} pending={pending} onNotice={setNotice} onPrint={printReceipt} products={products} onSaved={()=>syncSales(db,auth)} /> :
         tab === "finance" && (auth.role!=="cashier"||auth.is_superadmin) ? <FinancePage api={api} db={db} auth={auth} pending={pending} onNotice={setNotice} onSaved={()=>{setPending((count)=>count+1);syncSales(db,auth);}} /> :
@@ -491,11 +507,11 @@ export default function Home() {
           <div className="page-heading heading-row"><div><small>CATALOG</small><h1>Products</h1><p>Set prices and add-on choices for this store.</p></div>
             {(auth.role !== "cashier" || auth.is_superadmin) && <button className="button primary" onClick={() => setEditing(newProduct())}><Plus size={18} /> New product</button>}
           </div>
-          {editing ? <div className="form-card"><h2>{editing.id ? "Edit product" : "New product"}</h2><ProductForm product={editing} onSave={saveProduct} onCancel={() => setEditing(null)} busy={busy} /></div> :
+          {editing ? <div className="form-card"><h2>{editing.id ? "Edit product" : "New product"}</h2><ProductForm product={editing} storeID={auth.store_id} onSave={saveProduct} onCancel={() => setEditing(null)} onNotice={setNotice} busy={busy} /></div> :
           <div className="table-card"><div className="table-head"><strong>{productTrash ? deletedProducts.length : products.length} products</strong><span>Prices in IDR</span>
             {auth.is_superadmin && <button className="button secondary" onClick={() => { setProductTrash(!productTrash); }}>{productTrash ? "Active products" : "Deleted products"}</button>}
           </div>
-          {(productTrash ? deletedProducts : products).map((product) => <div className="product-row" key={product.id}><span className="product-icon compact">{product.name.slice(0, 1).toUpperCase()}</span><div><strong>{product.name}</strong><small>{product.sku} · {product.addon_groups.length} add-on groups</small></div><strong>{money(product.price)}</strong>
+          {(productTrash ? deletedProducts : products).map((product) => <div className="product-row" key={product.id}>{product.image_urls?.[0]?<img className="product-photo compact" src={product.image_urls[0]} alt=""/>:<span className="product-icon compact">{product.name.slice(0, 1).toUpperCase()}</span>}<div><strong>{product.name}</strong><small>{product.sku} · {product.addon_groups.length} add-on groups · {product.image_urls?.length||0} images</small></div><strong>{money(product.price)}</strong>
             {productTrash ? auth.is_superadmin&&<button className="button secondary" onClick={() => changeProduct(product,true)}>Restore</button> : <>
               {(auth.role !== "cashier" || auth.is_superadmin) && <button className="icon-button" aria-label={`Edit ${product.name}`} onClick={() => setEditing(product)}><Pencil size={17} /></button>}
               {(auth.role === "owner" || auth.role === "admin" || auth.is_superadmin) && <button className="icon-button danger" aria-label={`Delete ${product.name}`} onClick={() => changeProduct(product,false)}><Trash2 size={17} /></button>}

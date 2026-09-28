@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/umarkotak/marpos/apps/api/config"
 	"github.com/umarkotak/marpos/apps/api/datastore"
 	"github.com/umarkotak/marpos/apps/api/handlers/auth_handler"
 	"github.com/umarkotak/marpos/apps/api/utils/render"
@@ -46,6 +49,7 @@ type Product struct {
 	Groups         []Group         `json:"addon_groups"`
 	CostBreakdown  json.RawMessage `db:"cost_breakdown" json:"cost_breakdown"`
 	CostConfigured bool            `db:"cost_configured" json:"cost_configured"`
+	ImageURLs      json.RawMessage `db:"image_urls" json:"image_urls"`
 }
 
 type optionInput struct {
@@ -62,12 +66,13 @@ type groupInput struct {
 }
 
 type productInput struct {
-	SKU     string       `json:"sku"`
-	Barcode string       `json:"barcode"`
-	Name    string       `json:"name"`
-	Price   int64        `json:"price"`
-	Groups  []groupInput `json:"addon_groups"`
-	Costs   []Cost       `json:"cost_breakdown"`
+	SKU       string       `json:"sku"`
+	Barcode   string       `json:"barcode"`
+	Name      string       `json:"name"`
+	Price     int64        `json:"price"`
+	Groups    []groupInput `json:"addon_groups"`
+	Costs     []Cost       `json:"cost_breakdown"`
+	ImageURLs []string     `json:"image_urls"`
 }
 
 func List(c fiber.Ctx) error {
@@ -79,7 +84,7 @@ func List(c fiber.Ctx) error {
 	}
 	db := datastore.Get().Db
 	var products []Product
-	err := db.Select(&products, `SELECT p.id, p.sku, COALESCE(p.barcode,'') AS barcode, p.name, pp.amount AS price,p.cost_breakdown,p.cost_configured
+	err := db.Select(&products, `SELECT p.id, p.sku, COALESCE(p.barcode,'') AS barcode, p.name, pp.amount AS price,p.cost_breakdown,p.cost_configured,p.image_urls
 		FROM products p JOIN product_prices pp ON pp.product_id = p.id AND pp.ends_at IS NULL
 		WHERE p.store_id = $1 AND (p.deleted_at IS NOT NULL) = $2 AND (p.active=true OR $2) ORDER BY p.name`, storeID, trash)
 	if err != nil {
@@ -151,6 +156,31 @@ func Save(c fiber.Ctx) error {
 	if input.Costs == nil {
 		input.Costs = []Cost{}
 	}
+	if len(input.ImageURLs) > 10 {
+		return render.Failure(c, 400, "invalid_image", "Use at most 10 product images.")
+	}
+	imagePrefix := "/backend/images/" + storeID + "/"
+	seenImages := make(map[string]bool, len(input.ImageURLs))
+	for _, imageURL := range input.ImageURLs {
+		if !strings.HasPrefix(imageURL, imagePrefix) || seenImages[imageURL] {
+			return render.Failure(c, 400, "invalid_image", "Choose images uploaded for this store.")
+		}
+		name := strings.TrimPrefix(imageURL, imagePrefix)
+		if !strings.HasSuffix(name, ".avif") {
+			return render.Failure(c, 400, "invalid_image", "Choose images uploaded for this store.")
+		}
+		if _, err := uuid.Parse(strings.TrimSuffix(name, ".avif")); err != nil {
+			return render.Failure(c, 400, "invalid_image", "Choose images uploaded for this store.")
+		}
+		if _, err := os.Stat(filepath.Join(config.Get().StorageDir, storeID, name)); err != nil {
+			return render.Failure(c, 400, "invalid_image", "An image is missing from storage.")
+		}
+		seenImages[imageURL] = true
+	}
+	if input.ImageURLs == nil {
+		input.ImageURLs = []string{}
+	}
+	images, _ := json.Marshal(input.ImageURLs)
 	costs, _ := json.Marshal(input.Costs)
 	for i := range input.Groups {
 		group := &input.Groups[i]
@@ -207,7 +237,7 @@ func Save(c fiber.Ctx) error {
 	if err != nil {
 		return render.Failure(c, 409, "product_conflict", "Check the SKU, barcode, and add-on names.")
 	}
-	if _, err = tx.Exec(`UPDATE products SET cost_breakdown=$1,cost_configured=true WHERE id=$2`, string(costs), productID); err != nil {
+	if _, err = tx.Exec(`UPDATE products SET cost_breakdown=$1,cost_configured=true,image_urls=$2 WHERE id=$3`, string(costs), string(images), productID); err != nil {
 		return render.Failure(c, 500, "database_error", "Could not save product costs.")
 	}
 	if err = saveGroups(tx, storeID, productID, input.Groups); err != nil {

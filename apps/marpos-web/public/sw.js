@@ -1,4 +1,5 @@
-const cacheName = "marpos-app-v3";
+const cacheName = "marpos-app-v4";
+const imageCacheName = "marpos-images-v1";
 const shell = ["/", "/offline.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -8,7 +9,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter((name) => name.startsWith("marpos-") && name !== cacheName).map((name) => caches.delete(name)));
+    await Promise.all(names.filter((name) => name.startsWith("marpos-") && name !== cacheName && name !== imageCacheName).map((name) => caches.delete(name)));
     await self.clients.claim();
   })());
 });
@@ -38,6 +39,24 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/backend/images/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(imageCacheName);
+      const cached = await cache.match(request);
+      const savedAt = Number(cached?.headers.get("X-Marpos-Cached-At") || 0);
+      const maxAge = Number(cached?.headers.get("Cache-Control")?.match(/max-age=(\d+)/)?.[1] || 0) * 1000;
+      if (cached && Date.now() - savedAt < maxAge) return cached;
+      try {
+        const response = await fetch(request, {cache:"no-store"});
+        if (!response.ok) return cached || response;
+        const headers = new Headers({"Content-Type":"image/avif", "Cache-Control":response.headers.get("Cache-Control")||"public, max-age=604800", "X-Marpos-Cached-At":String(Date.now())});
+        const copy = new Response(await response.blob(), {status:response.status, statusText:response.statusText, headers});
+        await cache.put(request, copy.clone());
+        return copy;
+      } catch { return cached || Response.error(); }
+    })());
+    return;
+  }
   if (url.pathname.startsWith("/backend/") || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {

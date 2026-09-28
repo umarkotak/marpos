@@ -8,4 +8,6 @@ type Config struct {
 	DbTimezone       string
 	SuperadminEmails string
 	GoogleClientID   string
+	StorageDir       string
+	ImageCacheDays   int
 }

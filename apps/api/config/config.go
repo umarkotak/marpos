@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/subosito/gotenv"
 )
@@ -18,7 +19,17 @@ func Initialize() {
 		DbTimezone:       getEnvStringWithDefault("DB_TIMEZONE", "Asia/Jakarta"),
 		SuperadminEmails: getEnvStringWithDefault("SUPERADMIN_EMAILS", "umarkotak@gmail.com"),
 		GoogleClientID:   os.Getenv("GOOGLE_CLIENT_ID"),
+		StorageDir:       getEnvStringWithDefault("STORAGE_DIR", "storage"),
+		ImageCacheDays:   imageCacheDays(),
 	}
+}
+
+func imageCacheDays() int {
+	days, err := strconv.Atoi(os.Getenv("IMAGE_CACHE_DAYS"))
+	if err != nil || days < 0 || days > 365 {
+		return 7
+	}
+	return days
 }
 
 func Get() Config { return config }
