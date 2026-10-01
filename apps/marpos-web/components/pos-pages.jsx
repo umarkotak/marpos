@@ -10,16 +10,17 @@ const money = (value) => new Intl.NumberFormat("id-ID", { style: "currency", cur
 
 export function StoreManagement({ stores, invitations, onCreate, onSelect, onDecide, onLogout, notice }) {
   const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
   const [busy, setBusy] = useState(false);
   async function create(event) {
     event.preventDefault();
     setBusy(true);
-    try { if (await onCreate(name)) setName(""); } finally { setBusy(false); }
+    try { if (await onCreate({ name, slug })) { setName(""); setSlug(""); } } finally { setBusy(false); }
   }
   return <main className="management-screen"><section className="management-card"><span className="logo">M</span>{onLogout && <button className="button secondary" style={{float:"right"}} onClick={onLogout}>Sign out</button>}<h1>Manage stores</h1><p>Create a store or select one you can use.</p>
     {notice && <p className="message" role="status">{notice}</p>}
     {stores.map((store) => <button className="store-choice" key={store.id} onClick={() => onSelect(store)}><span><strong>{store.name}</strong><small>{store.role}</small></span><span>Open →</span></button>)}
-    <form onSubmit={create} className="create-store"><label>New store name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} placeholder="My Store" /></label><button className="button primary" disabled={busy}>Create store</button></form>
+    <form onSubmit={create} className="create-store"><label>New store name<input required maxLength={100} value={name} onChange={(event) => setName(event.target.value)} placeholder="My Store" /></label><label>Slug<input required maxLength={100} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="my-store" /></label><button className="button primary" disabled={busy}>Create store</button></form>
     {invitations.length > 0 && <div className="invitation-list"><h2>Invitations</h2>{invitations.map((invite) => <div className="invitation-row" key={invite.id}><div><strong>{invite.store_name}</strong><small>Role: {invite.role}</small></div><button className="button primary" onClick={() => onDecide(invite.id,true)}>Accept</button><button className="button secondary" onClick={() => onDecide(invite.id,false)}>Reject</button></div>)}</div>}
   </section></main>;
 }
@@ -91,7 +92,7 @@ export function OrdersPage({ api, db, auth, pending, onNotice, onPrint, products
   return <section className="products-page"><div className="page-heading heading-row"><div><small>SALES</small><h1>Order history</h1><p>Recent orders for {auth.store_name}.</p></div>{auth.is_superadmin && <button className="button secondary" onClick={() => {setTrash(!trash);closeDetail();}}>{trash?"Active orders":"Deleted orders"}</button>}</div>
     <div className="table-card">
       <div className="table-head"><strong>{shown.length} orders</strong><span>Most recent first</span></div>
-      <div className="orders-scroll"><table className="orders-table"><thead><tr><th>Reference</th><th>Buyer</th><th>Date</th><th>Cashier</th><th>Total</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
+      <div className="orders-scroll"><table className="orders-table order-history-table"><thead><tr><th>Reference</th><th>Buyer</th><th>Date</th><th>Cashier</th><th>Total</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
         {shown.map((order) => <tr key={order.id}>
           <td><strong>{order.reference || "Pending sync"}</strong>{order.local && <small>Temporary receipt {order.receipt_number.slice(-8)}</small>}</td>
           <td><strong>{order.buyer_name||"—"}</strong><small>{order.buyer_phone}</small><small>{order.buyer_email}</small></td>

@@ -62,6 +62,20 @@ export async function replaceProducts(db, storeID, products) {
   await transactionDone(tx);
 }
 
+export async function clearStoreRecords(db, storeID, includeProducts) {
+  const tx = db.transaction(["sales", "outbox", "products", "meta"], "readwrite");
+  const done = transactionDone(tx);
+  const sales = tx.objectStore("sales"), outbox = tx.objectStore("outbox"), products = tx.objectStore("products"), meta = tx.objectStore("meta");
+  const [savedSales, pending, savedProducts, keys] = await Promise.all([
+    requestResult(sales.getAll()), requestResult(outbox.getAll()), requestResult(products.getAll()), requestResult(meta.getAllKeys()),
+  ]);
+  savedSales.filter((row) => row.store_id === storeID).forEach((row) => sales.delete(row.id));
+  pending.filter((row) => row.store_id === storeID).forEach((row) => outbox.delete(row.operation_id));
+  if (includeProducts) savedProducts.filter((row) => row.store_id === storeID).forEach((row) => products.delete(row.id));
+  keys.filter((key) => typeof key === "string" && (key.startsWith(`report:${storeID}:`) || key.startsWith(`audit:${storeID}:`) || key.startsWith("drafts:") && key.endsWith(`:${storeID}`))).forEach((key) => meta.delete(key));
+  await done;
+}
+
 export async function saveSale(db, sale, draftKey, workspace) {
   const tx = db.transaction(draftKey?["sales", "outbox", "meta"]:["sales", "outbox"], "readwrite");
   tx.objectStore("sales").put({ ...sale, sync_status: "pending" });

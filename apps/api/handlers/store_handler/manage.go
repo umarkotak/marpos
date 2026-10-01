@@ -17,6 +17,12 @@ import (
 type Store struct {
 	ID            string  `db:"id" json:"id"`
 	Name          string  `db:"name" json:"name"`
+	Slug          string  `db:"slug" json:"slug"`
+	Address       string  `db:"address" json:"address"`
+	GoogleMapsURL string  `db:"google_maps_url" json:"google_maps_url"`
+	InstagramURL  string  `db:"instagram_url" json:"instagram_url"`
+	FacebookURL   string  `db:"facebook_url" json:"facebook_url"`
+	TikTokURL     string  `db:"tiktok_url" json:"tiktok_url"`
 	RegisterID    string  `db:"register_id" json:"register_id"`
 	TaxPercentage float64 `db:"tax_percentage" json:"tax_percentage"`
 	Role          string  `db:"role" json:"role"`
@@ -24,7 +30,7 @@ type Store struct {
 
 func List(c fiber.Ctx) error {
 	stores := []Store{}
-	err := datastore.Get().Db.Select(&stores, `SELECT s.id,s.name,r.id AS register_id,s.tax_percentage,usr.role
+	err := datastore.Get().Db.Select(&stores, `SELECT s.id,s.name,s.slug,s.address,s.google_maps_url,s.instagram_url,s.facebook_url,s.tiktok_url,r.id AS register_id,s.tax_percentage,usr.role
         FROM user_store_roles usr JOIN stores s ON s.id=usr.store_id JOIN registers r ON r.store_id=s.id
         WHERE usr.user_id=$1 ORDER BY s.created_at`, c.Locals("user_id"))
 	if err != nil {
@@ -36,13 +42,18 @@ func List(c fiber.Ctx) error {
 func Create(c fiber.Ctx) error {
 	var input struct {
 		Name string `json:"name"`
+		Slug string `json:"slug"`
 	}
 	if err := c.Bind().Body(&input); err != nil {
 		return render.Failure(c, 400, "invalid_store", "Enter a store name.")
 	}
 	input.Name = strings.TrimSpace(input.Name)
+	input.Slug = strings.TrimSpace(input.Slug)
 	if input.Name == "" || len(input.Name) > 100 {
 		return render.Failure(c, 400, "invalid_store", "Enter a store name up to 100 characters.")
+	}
+	if len(input.Slug) > 100 || !slugPattern.MatchString(input.Slug) {
+		return render.Failure(c, 400, "invalid_slug", "Use lowercase letters, numbers, and hyphens for the store slug.")
 	}
 	tx, err := datastore.Get().Db.BeginTxx(c.Context(), nil)
 	if err != nil {
@@ -54,8 +65,10 @@ func Create(c fiber.Ctx) error {
 		return render.Failure(c, 500, "database_error", "Could not create store.")
 	}
 	var store Store
-	if err = tx.Get(&store.ID, `INSERT INTO stores(organization_id,name) VALUES($1,$2) RETURNING id`, orgID, input.Name); err != nil {
-		return render.Failure(c, 500, "database_error", "Could not create store.")
+	store.ID = uuid.NewString()
+	store.Slug = input.Slug
+	if _, err = tx.Exec(`INSERT INTO stores(id,organization_id,name,slug) VALUES($1,$2,$3,$4)`, store.ID, orgID, input.Name, store.Slug); err != nil {
+		return render.Failure(c, 409, "store_conflict", "Store name or slug is already in use.")
 	}
 	if err = tx.Get(&store.RegisterID, `INSERT INTO registers(store_id,name) VALUES($1,'Register 1') RETURNING id`, store.ID); err != nil {
 		return render.Failure(c, 500, "database_error", "Could not create store.")

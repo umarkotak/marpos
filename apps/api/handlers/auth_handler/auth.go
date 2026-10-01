@@ -29,7 +29,7 @@ type sessionData struct {
 }
 
 func Config(c fiber.Ctx) error {
-	return render.Response(c, fiber.StatusOK, fiber.Map{"google_client_id": config.Get().GoogleClientID})
+	return render.Response(c, fiber.StatusOK, fiber.Map{"google_client_id": config.Get().GoogleClientID, "features": fiber.Map{"danger_zone": config.Get().DangerZoneEnabled}})
 }
 
 func Google(c fiber.Ctx) error {

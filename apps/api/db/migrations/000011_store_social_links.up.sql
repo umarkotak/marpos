@@ -1,0 +1,5 @@
+ALTER TABLE stores
+    ADD COLUMN address TEXT NOT NULL DEFAULT '',
+    ADD COLUMN instagram_url TEXT NOT NULL DEFAULT '',
+    ADD COLUMN facebook_url TEXT NOT NULL DEFAULT '',
+    ADD COLUMN tiktok_url TEXT NOT NULL DEFAULT '';

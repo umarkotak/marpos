@@ -1,4 +1,4 @@
-const cacheName = "marpos-app-v4";
+const cacheName = "marpos-app-v5";
 const imageCacheName = "marpos-images-v1";
 const shell = ["/", "/offline.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -82,10 +82,12 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.webmanifest") {
     event.respondWith((async () => {
       const cached = await caches.match(request);
-      if (cached) return cached;
-      const response = await fetch(request);
-      if (response.ok) await (await caches.open(cacheName)).put(request, response.clone());
-      return response;
+      if (cached && !["localhost", "127.0.0.1"].includes(url.hostname)) return cached;
+      try {
+        const response = await fetch(request, { cache: "no-store" });
+        if (response.ok) await (await caches.open(cacheName)).put(request, response.clone());
+        return response;
+      } catch { return cached || Response.error(); }
     })());
   }
 });

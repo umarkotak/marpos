@@ -16,3 +16,5 @@ Run these commands from the project root. Create the database named in `DB_URL` 
 Set `GOOGLE_CLIENT_ID` in `.env` to a Google web client ID. Add `http://localhost:6011` to its authorized JavaScript origins. The first sign-in asks the user to create a store. Invitations appear in the invited user's app after they sign in. The browser keeps a local product catalog and queues cash sales for sync for up to 30 days after sign-in.
 
 `just run` starts both the API on port 6010 and the web app on port 6011. Press Ctrl+C to stop both. Product and store changes need the API online. Sales can be completed while offline after the first online sign-in.
+
+Set `ENABLE_DANGER_ZONE=true` in the API environment to show the Danger zone in Store settings. It is off by default. A store owner or superadmin can permanently clear that store's orders, or clear its products and orders together. The action also clears matching records on the current browser. Apply database migrations before enabling the flag.

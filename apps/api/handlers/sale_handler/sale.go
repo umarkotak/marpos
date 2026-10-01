@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -84,6 +85,13 @@ func Sync(c fiber.Ctx) error {
 		return render.Failure(c, 500, "database_error", "Could not sync sale.")
 	}
 	defer tx.Rollback()
+	var clearedAt sql.NullTime
+	if err = tx.Get(&clearedAt, `SELECT orders_cleared_at FROM stores WHERE id=$1 FOR UPDATE`, storeID); err != nil {
+		return render.Failure(c, 500, "database_error", "Could not sync sale.")
+	}
+	if clearedAt.Valid && !sale.CompletedAt.After(clearedAt.Time) {
+		return render.Failure(c, 409, "sale_cleared", "This sale was made before the store orders were cleared.")
+	}
 	var registered bool
 	err = tx.Get(&registered, `SELECT EXISTS(SELECT 1 FROM sync_devices d JOIN user_store_roles usr ON usr.store_id=d.store_id AND usr.user_id=$4
 		WHERE d.id=$1 AND d.store_id=$2 AND d.register_id=$3 AND d.revoked_at IS NULL)`, sale.DeviceID, storeID, sale.RegisterID, sale.CashierID)
@@ -108,13 +116,17 @@ func Sync(c fiber.Ctx) error {
 	if err != nil {
 		return render.Failure(c, 409, "sync_conflict", "Sale sync ID is already in use.")
 	}
+	orderYear := sale.CompletedAt.In(time.FixedZone("WIB", 7*60*60)).Year()
 	var orderNumber int64
-	if err = tx.Get(&orderNumber, `UPDATE stores SET next_order_number=next_order_number+1 WHERE id=$1 RETURNING next_order_number-1`, storeID); err != nil {
+	if err = tx.Get(&orderNumber, `INSERT INTO store_order_counters (store_id,order_year,next_order_number)
+		VALUES ($1,$2,2) ON CONFLICT (store_id,order_year) DO UPDATE
+		SET next_order_number=store_order_counters.next_order_number+1
+		RETURNING next_order_number-1`, storeID, orderYear); err != nil {
 		return render.Failure(c, 500, "database_error", "Could not assign an order number.")
 	}
-	var reference string
-	err = tx.Get(&reference, `INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_number,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING reference`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderNumber, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail)
+	reference := fmt.Sprintf("MP-%d-%05d", orderYear, orderNumber)
+	_, err = tx.Exec(`INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_year,order_number,reference,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderYear, orderNumber, reference, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail)
 	if err != nil {
 		return render.Failure(c, 409, "sale_conflict", "Sale ID or receipt number is already in use.")
 	}

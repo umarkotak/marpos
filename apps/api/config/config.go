@@ -12,15 +12,16 @@ var config Config
 func Initialize() {
 	_ = gotenv.Load()
 	config = Config{
-		AppEnv:           getEnvStringWithDefault("APP_ENV", "development"),
-		AppPort:          getEnvStringWithDefault("APP_PORT", "6010"),
-		AppHost:          getEnvStringWithDefault("APP_HOST", "http://localhost:6010"),
-		DbURL:            os.Getenv("DB_URL"),
-		DbTimezone:       getEnvStringWithDefault("DB_TIMEZONE", "Asia/Jakarta"),
-		SuperadminEmails: getEnvStringWithDefault("SUPERADMIN_EMAILS", "umarkotak@gmail.com"),
-		GoogleClientID:   os.Getenv("GOOGLE_CLIENT_ID"),
-		StorageDir:       getEnvStringWithDefault("STORAGE_DIR", "storage"),
-		ImageCacheDays:   imageCacheDays(),
+		AppEnv:            getEnvStringWithDefault("APP_ENV", "development"),
+		AppPort:           getEnvStringWithDefault("APP_PORT", "6010"),
+		AppHost:           getEnvStringWithDefault("APP_HOST", "http://localhost:6010"),
+		DbURL:             os.Getenv("DB_URL"),
+		DbTimezone:        getEnvStringWithDefault("DB_TIMEZONE", "Asia/Jakarta"),
+		SuperadminEmails:  getEnvStringWithDefault("SUPERADMIN_EMAILS", "umarkotak@gmail.com"),
+		GoogleClientID:    os.Getenv("GOOGLE_CLIENT_ID"),
+		StorageDir:        getEnvStringWithDefault("STORAGE_DIR", "storage"),
+		ImageCacheDays:    imageCacheDays(),
+		DangerZoneEnabled: os.Getenv("ENABLE_DANGER_ZONE") == "true",
 	}
 }
 
