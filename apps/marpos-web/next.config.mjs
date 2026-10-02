@@ -9,6 +9,7 @@ const nextConfig = {
     return [{source:"/sw.js",headers:[{key:"Cache-Control",value:"no-cache, no-store, must-revalidate"}]}];
   },
   devIndicators: false,
+  allowedDevOrigins: ['marpos.cabocil.com'],
 };
 
 export default nextConfig;
