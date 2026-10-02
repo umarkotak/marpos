@@ -51,6 +51,8 @@ bun install
 cd ../..
 ```
 
+Copy `apps/marpos-web/.env.example` to `apps/marpos-web/.env.local`. Set `API_ORIGIN` to the backend server origin. It defaults to `http://localhost:6030`. See the [frontend environment setup](apps/marpos-web/README.md) to use a remote backend.
+
 ## Run locally
 
 ```sh
