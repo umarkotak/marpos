@@ -13,8 +13,8 @@ func Initialize() {
 	_ = gotenv.Load()
 	config = Config{
 		AppEnv:            getEnvStringWithDefault("APP_ENV", "development"),
-		AppPort:           getEnvStringWithDefault("APP_PORT", "6010"),
-		AppHost:           getEnvStringWithDefault("APP_HOST", "http://localhost:6010"),
+		AppPort:           getEnvStringWithDefault("APP_PORT", "6030"),
+		AppHost:           getEnvStringWithDefault("APP_HOST", "http://localhost:6030"),
 		DbURL:             os.Getenv("DB_URL"),
 		DbTimezone:        getEnvStringWithDefault("DB_TIMEZONE", "Asia/Jakarta"),
 		SuperadminEmails:  getEnvStringWithDefault("SUPERADMIN_EMAILS", "umarkotak@gmail.com"),

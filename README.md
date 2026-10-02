@@ -35,7 +35,7 @@ Edit `apps/api/.env`:
 - Set `STORAGE_DIR` if the API does not run from `apps/api`. The default `storage` writes to `apps/api/storage` when you use `just run`.
 - Set `IMAGE_CACHE_DAYS` to change the browser image cache period. The default is 7 days.
 
-The example `DB_URL` uses the user and password `admin123` and port `5432`. Change it if your local PostgreSQL server uses different details. Add `http://localhost:6011` to the Google client's **Authorized JavaScript origins**. The API can start without `GOOGLE_CLIENT_ID`, but sign-in will not work.
+The example `DB_URL` uses the user and password `admin123` and port `5432`. Change it if your local PostgreSQL server uses different details. Add `http://localhost:6031` to the Google client's **Authorized JavaScript origins**. The API can start without `GOOGLE_CLIENT_ID`, but sign-in will not work.
 
 Start PostgreSQL and create the database named in `DB_URL` manually. Then apply the migrations:
 
@@ -57,15 +57,19 @@ cd ../..
 just run
 ```
 
-`just run` builds and starts the API on `http://localhost:6010` and the web app on `http://localhost:6011`. Press Ctrl+C to stop both. Check the API at `http://localhost:6010/marpos/api/ping`.
+`just run` builds and starts the API on `http://localhost:6030` and the web app on `http://localhost:6031`. Press Ctrl+C to stop both. Check the API at `http://localhost:6030/marpos/api/ping`.
 
-Open `http://localhost:6011` and sign in with Google. Create a store on your first sign-in. Each store has one register. Set the store name and tax rate in **Store settings**. Invite other users from **Team** after they have signed in to Marpos once. Invitations appear in **Manage stores**. Users can accept or reject them there. A rejected invitation can be sent again. Create a product on the **Products** page, then use **Point of sale** to complete a cash sale. **Order history** shows sales and can print a receipt through the browser print dialog. Each synced sale has a reference in the form `MP-{year}-00001` with at least five digits. The number resets each year for each store. The year uses the sale completion date in WIB. Existing references stay unchanged. Offline sales show a temporary receipt ID until they sync. Apply migration `000008` with `just migrate-up` before you restart the API.
+## Deploy the API on macOS
+
+On the server, check out this repository at `/Users/umar/umar/personal_project/marpos` and set `apps/api/.env`. Run `just install-service` once. Run `just deploy` for later releases. The service starts at boot. See the [API deployment steps](apps/api/README.md#deploy-the-api-on-macos) for setup, logs, and backups.
+
+Open `http://localhost:6031` and sign in with Google. Create a store on your first sign-in. Each store has one register. Set the store name and tax rate in **Store settings**. Invite other users from **Team** after they have signed in to Marpos once. Invitations appear in **Manage stores**. Users can accept or reject them there. A rejected invitation can be sent again. Create a product on the **Products** page, then use **Point of sale** to complete a cash sale. **Order history** shows sales and can print a receipt through the browser print dialog. Each synced sale has a reference in the form `MP-{year}-00001` with at least five digits. The number resets each year for each store. The year uses the sale completion date in WIB. Existing references stay unchanged. Offline sales show a temporary receipt ID until they sync. Apply migration `000008` with `just migrate-up` before you restart the API.
 
 The store owner can invite and remove users. An admin can manage managers and cashiers. Managers can change products and store settings. Cashiers can complete sales. Owners, store admins, and superadmins can soft-delete orders. Only superadmins can restore deleted records. Deleted products and orders stay in the database and do not appear in the normal catalog or order history.
 
 ## Offline use
 
-Sign in and load the product catalog while online first. Open Marpos at `http://localhost:6011` for local use. In production, serve it over HTTPS. You can install it from your browser's **Install app** or **Add to Home Screen** action. After the first load, the app can open from its cached files even when the web server is down.
+Sign in and load the product catalog while online first. Open Marpos at `http://localhost:6031` for local use. In production, serve it over HTTPS. You can install it from your browser's **Install app** or **Add to Home Screen** action. After the first load, the app can open from its cached files even when the web server is down.
 
 You can complete cash sales in the same browser when the API, web server, or internet is unavailable. The browser saves sales on this device and shows a pending count. It retries sync when the API returns. Keep this device and browser until the pending count reaches zero. Do not clear browser site data while sales are pending.
 

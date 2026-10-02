@@ -1,4 +1,7 @@
 .env
 marpos-api
+marpos-api.next
+marpos-api.log
+marpos-api.error.log
 /storage/*
 !/storage/README.md

@@ -14,9 +14,9 @@ run: bin
         echo "Run bun install in apps/marpos-web first." >&2
         exit 1
     fi
-    (cd apps/api && APP_PORT=6010 APP_HOST=http://localhost:6010 exec ./marpos-api) &
+    (cd apps/api && APP_PORT=6030 APP_HOST=http://localhost:6030 exec ./marpos-api) &
     api_pid=$!
-    (cd apps/marpos-web && exec ./node_modules/.bin/next dev --port 6011) &
+    (cd apps/marpos-web && exec ./node_modules/.bin/next dev --port 6031) &
     web_pid=$!
     stop() {
         trap - INT TERM EXIT
@@ -28,3 +28,37 @@ run: bin
 
 bin:
     cd apps/api && go build -o marpos-api .
+
+# Run these service recipes from the checkout at /Users/umar/umar/personal_project/marpos.
+install-service: bin
+    test "$(pwd)" = "/Users/umar/umar/personal_project/marpos"
+    test -f apps/api/.env
+    cd apps/api && ./marpos-api migrate up
+    sudo install -o root -g wheel -m 644 apps/api/com.marpos-api.plist /Library/LaunchDaemons/com.marpos-api.plist
+    sudo launchctl bootstrap system /Library/LaunchDaemons/com.marpos-api.plist
+
+uninstall-service:
+    sudo launchctl bootout system/com.marpos-api
+    sudo rm /Library/LaunchDaemons/com.marpos-api.plist
+
+restart-service:
+    sudo launchctl kickstart -k system/com.marpos-api
+
+status-service:
+    sudo launchctl print system/com.marpos-api
+
+logs:
+    tail -f apps/api/marpos-api.error.log
+
+deploy:
+    #!/bin/sh
+    set -eu
+    test "$(pwd)" = "/Users/umar/umar/personal_project/marpos"
+    test -f apps/api/.env
+    git pull --ff-only
+    cd apps/api
+    trap 'rm -f marpos-api.next' EXIT
+    go build -o marpos-api.next .
+    ./marpos-api.next migrate up
+    mv marpos-api.next marpos-api
+    sudo launchctl kickstart -k system/com.marpos-api
