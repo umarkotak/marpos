@@ -120,7 +120,7 @@ Reports and finance use `from`, `to`, `period`, and `days` query parameters. Com
 
 Example: `/reports/comparison?period=custom&from=2026-09-01&to=2026-09-20&metric=units`.
 
-The PWA uses the same saved app shell for these paths. Load the app online before you use it offline. Report data still needs an online load for each date range.
+These paths are Next.js pages. The PWA saves the route pages and their scripts for offline use. Load the app online before you use it offline. Report data still needs an online load for each date range. See the [frontend structure](apps/marpos-web/README.md#frontend-structure) for the page, component, hook, and API layout.
 
 ## Superadmin access
 
