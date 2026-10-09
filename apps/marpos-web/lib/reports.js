@@ -1,5 +1,7 @@
+import { formatLocale } from "@/lib/i18n";
+
 export const money = (value) =>
-  new Intl.NumberFormat("id-ID", {
+  new Intl.NumberFormat(formatLocale(), {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,

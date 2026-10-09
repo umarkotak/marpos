@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { useEffect, useRef } from "react";
 import { money } from "@/lib/reports";
 
@@ -8,16 +9,17 @@ export function IdrInput({
   max = 1_000_000_000_000,
   ...props
 }) {
+  const locale = useI18n();
   const ref = useRef(null);
   const raw = value == null ? "" : String(value);
 
   useEffect(() => {
     ref.current?.setCustomValidity(
       raw !== "" && (Number(raw) < min || Number(raw) > max)
-        ? `Enter an amount from ${money(min)} to ${money(max)}.`
+        ? t("amount_range", { min: money(min), max: money(max) })
         : "",
     );
-  }, [raw, min, max]);
+  }, [raw, min, max, locale]);
 
   function change(event) {
     const input = event.currentTarget;
@@ -45,7 +47,7 @@ export function IdrInput({
       inputMode="numeric"
       value={raw === "" ? "" : money(Number(raw))}
       onChange={change}
-      placeholder="Rp 0"
+      placeholder={money(0)}
     />
   );
 }

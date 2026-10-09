@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 export function StoreSettings({
   auth,
@@ -6,6 +7,7 @@ export function StoreSettings({
   onClear,
   clearing,
 }) {
+  useI18n();
   const [name, setName] = useState(auth.store_name);
   const [slug, setSlug] = useState(auth.slug || "");
   const [address, setAddress] = useState(auth.address || "");
@@ -61,9 +63,9 @@ export function StoreSettings({
           {auth.store_name?.charAt(0).toUpperCase() || "S"}
         </span>
         <div>
-          <small>ACTIVE STORE</small>
+          <small>{t("active_store")}</small>
           <h2>{auth.store_name}</h2>
-          <p>Manage this store's details and checkout tax.</p>
+          <p>{t("manage_this_store_s_details_and_checkout_tax")}</p>
         </div>
       </header>
       <section
@@ -71,13 +73,13 @@ export function StoreSettings({
         aria-labelledby="store-identity-heading"
       >
         <div className="settings-section-copy">
-          <span>01 / STORE</span>
-          <h3 id="store-identity-heading">Store identity</h3>
-          <p>Set the name and slug for this store.</p>
+          <span>{t("01_store")}</span>
+          <h3 id="store-identity-heading">{t("store_identity")}</h3>
+          <p>{t("set_the_name_and_slug_for_this_store")}</p>
         </div>
         <div className="settings-fields">
           <label>
-            Store name
+            {t("store_name")}
             <input
               required
               maxLength={100}
@@ -86,7 +88,7 @@ export function StoreSettings({
             />
           </label>
           <label>
-            Slug
+            {t("slug")}
             <input
               required
               maxLength={100}
@@ -95,8 +97,9 @@ export function StoreSettings({
               onChange={(e) => setSlug(e.target.value)}
             />
             <small>
-              Use lowercase letters, numbers, and hyphens. The slug must be
-              unique.
+              {t(
+                "use_lowercase_letters_numbers_and_hyphens_the_slug_must_be_unique",
+              )}
             </small>
           </label>
         </div>
@@ -106,23 +109,23 @@ export function StoreSettings({
         aria-labelledby="store-location-heading"
       >
         <div className="settings-section-copy">
-          <span>02 / LOCATION</span>
-          <h3 id="store-location-heading">Location</h3>
-          <p>Add the address and Google Maps link for this store.</p>
+          <span>{t("02_location")}</span>
+          <h3 id="store-location-heading">{t("location")}</h3>
+          <p>{t("add_the_address_and_google_maps_link_for_this_store")}</p>
         </div>
         <div className="settings-fields">
           <label>
-            Street address
+            {t("street_address")}
             <textarea
               rows={3}
               maxLength={500}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Street, building, city, and postal code"
+              placeholder={t("street_building_city_and_postal_code")}
             />
           </label>
           <label>
-            Google Maps link
+            {t("google_maps_link")}
             <input
               type="url"
               maxLength={2048}
@@ -138,10 +141,12 @@ export function StoreSettings({
         aria-labelledby="store-social-heading"
       >
         <div className="settings-section-copy">
-          <span>03 / SOCIAL</span>
-          <h3 id="store-social-heading">Social links</h3>
+          <span>{t("03_social")}</span>
+          <h3 id="store-social-heading">{t("social_links")}</h3>
           <p>
-            Help customers find your store online. Add only the links you use.
+            {t(
+              "help_customers_find_your_store_online_add_only_the_links_you_use",
+            )}
           </p>
         </div>
         <div className="settings-fields">
@@ -152,7 +157,7 @@ export function StoreSettings({
               maxLength={2048}
               value={instagramURL}
               onChange={(e) => setInstagramURL(e.target.value)}
-              placeholder="https://www.instagram.com/yourstore"
+              placeholder={t("instagram_url_example")}
             />
           </label>
           <label>
@@ -162,7 +167,7 @@ export function StoreSettings({
               maxLength={2048}
               value={facebookURL}
               onChange={(e) => setFacebookURL(e.target.value)}
-              placeholder="https://www.facebook.com/yourstore"
+              placeholder={t("facebook_url_example")}
             />
           </label>
           <label>
@@ -172,22 +177,24 @@ export function StoreSettings({
               maxLength={2048}
               value={tiktokURL}
               onChange={(e) => setTikTokURL(e.target.value)}
-              placeholder="https://www.tiktok.com/@yourstore"
+              placeholder={t("tiktok_url_example")}
             />
           </label>
         </div>
       </section>
       <section className="settings-section" aria-labelledby="store-tax-heading">
         <div className="settings-section-copy">
-          <span>04 / CHECKOUT</span>
-          <h3 id="store-tax-heading">Tax</h3>
+          <span>{t("04_checkout")}</span>
+          <h3 id="store-tax-heading">{t("tax_label")}</h3>
           <p>
-            Tax is added by default. The cashier can turn it off for one sale.
+            {t(
+              "tax_is_added_by_default_the_cashier_can_turn_it_off_for_one_sale",
+            )}
           </p>
         </div>
         <div className="settings-fields">
           <label>
-            Tax percentage
+            {t("tax_percentage")}
             <div className="settings-number">
               <input
                 required
@@ -209,16 +216,18 @@ export function StoreSettings({
           aria-labelledby="danger-zone-heading"
         >
           <div className="settings-section-copy">
-            <span>05 / DANGER ZONE</span>
-            <h3 id="danger-zone-heading">Danger zone</h3>
-            <p>These actions permanently remove store data.</p>
+            <span>{t("05_danger_zone")}</span>
+            <h3 id="danger-zone-heading">{t("danger_zone")}</h3>
+            <p>{t("these_actions_permanently_remove_store_data")}</p>
           </div>
           <div className="settings-fields">
             <div className="danger-action">
               <div>
-                <strong>Clear all orders</strong>
+                <strong>{t("clear_all_orders")}</strong>
                 <p>
-                  Delete every order, including deleted orders, from this store.
+                  {t(
+                    "delete_every_order_including_deleted_orders_from_this_store",
+                  )}
                 </p>
               </div>
               <button
@@ -227,13 +236,15 @@ export function StoreSettings({
                 disabled={!!clearing}
                 onClick={() => onClear("sales")}
               >
-                {clearing === "sales" ? "Clearing…" : "Clear all orders"}
+                {clearing === "sales" ? t("clearing") : t("clear_all_orders")}
               </button>
             </div>
             <div className="danger-action">
               <div>
-                <strong>Clear all products and orders</strong>
-                <p>Delete every product, image, and order from this store.</p>
+                <strong>{t("clear_all_products_and_orders")}</strong>
+                <p>
+                  {t("delete_every_product_image_and_order_from_this_store")}
+                </p>
               </div>
               <button
                 type="button"
@@ -241,16 +252,18 @@ export function StoreSettings({
                 disabled={!!clearing}
                 onClick={() => onClear("products")}
               >
-                {clearing === "products" ? "Clearing…" : "Clear all products"}
+                {clearing === "products"
+                  ? t("clearing")
+                  : t("clear_all_products")}
               </button>
             </div>
           </div>
         </section>
       )}
       <footer className="settings-actions">
-        <span>Changes apply to this store.</span>
+        <span>{t("changes_apply_to_this_store")}</span>
         <button className="button primary" disabled={busy}>
-          {busy ? "Saving..." : "Save changes"}
+          {busy ? t("saving_label") : t("save_changes")}
         </button>
       </footer>
     </form>

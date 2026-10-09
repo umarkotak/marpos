@@ -1,6 +1,8 @@
+import { t, translateMessage, useI18n } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { useRegister } from "@/components/register-provider";
 export function LoginScreen() {
+  const locale = useI18n();
   const { appConfig, db, signIn, notice } = useRegister();
   const clientID = appConfig?.google_client_id || "";
   const googleButton = useRef(null);
@@ -34,8 +36,9 @@ export function LoginScreen() {
       theme: "outline",
       size: "large",
       width: 280,
+      locale,
     });
-  }, [googleReady, clientID, db, signIn]);
+  }, [googleReady, clientID, db, signIn, locale]);
 
   return (
     <main className="login-screen">
@@ -43,15 +46,16 @@ export function LoginScreen() {
         <span className="logo">M</span>
         <h1>Marpos</h1>
         <p>
-          Sign in online to prepare your register. You can then sell offline for
-          30 days.
+          {t(
+            "sign_in_online_to_prepare_your_register_you_can_then_sell_offline_for_30_days",
+          )}
         </p>
-        {notice && <div className="message">{notice}</div>}
+        {notice && <div className="message">{translateMessage(notice)}</div>}
         {clientID ? (
           <div ref={googleButton} />
         ) : (
           <div className="message">
-            Set GOOGLE_CLIENT_ID in the API to enable Google sign-in.
+            {t("set_google_client_id_in_the_api_to_enable_google_sign_in")}
           </div>
         )}
       </div>

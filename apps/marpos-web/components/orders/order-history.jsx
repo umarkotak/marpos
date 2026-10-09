@@ -1,3 +1,4 @@
+import { t, message, useI18n, formatLocale } from "@/lib/i18n";
 import { AuditHistory } from "@/components/audit/audit-history";
 import { OrderEditor } from "@/components/orders/order-editor";
 import { BuyerFields, blankBuyer, buyerError } from "@/components/buyer-fields";
@@ -17,6 +18,7 @@ export function OrdersPage({
   products = [],
   onSaved = () => {},
 }) {
+  useI18n();
   const [orders, setOrders] = useState([]);
   const [local, setLocal] = useState([]);
   const [recordStatus] = useQueryState("status");
@@ -41,7 +43,7 @@ export function OrdersPage({
     } catch (error) {
       if (error.status !== 401)
         onNotice(
-          "Order history is unavailable offline. Local sales are shown.",
+          message("order_history_is_unavailable_offline_local_sales_are_shown"),
         );
       setOrders([]);
       setMore(false);
@@ -106,7 +108,7 @@ export function OrdersPage({
   async function change(order, restore) {
     if (
       !restore &&
-      !confirm(`Move order ${order.reference} to deleted orders?`)
+      !confirm(t("delete_order_confirmation", { reference: order.reference }))
     )
       return;
     try {
@@ -128,7 +130,9 @@ export function OrdersPage({
     setEditing(false);
     closeDetail();
     await load();
-    onNotice("Order corrected. The original values are in correction history.");
+    onNotice(
+      message("order_corrected_the_original_values_are_in_correction_history"),
+    );
   }
   async function saveBuyer(event) {
     event.preventDefault();
@@ -150,10 +154,10 @@ export function OrdersPage({
       });
       setRepair(null);
       await load();
-      onNotice("Buyer details saved. Pending sync will retry.");
+      onNotice(message("buyer_details_saved_pending_sync_will_retry"));
       onSaved();
     } catch {
-      onNotice("Buyer details were not saved. Try again.");
+      onNotice(message("buyer_details_were_not_saved_try_again"));
     } finally {
       setRepairBusy(false);
     }
@@ -162,9 +166,11 @@ export function OrdersPage({
     <section className="products-page">
       <div className="page-heading heading-row">
         <div>
-          <small>SALES</small>
-          <h1>Order history</h1>
-          <p>Recent orders for {auth.store_name}.</p>
+          <small>{t("sales")}</small>
+          <h1>{t("order_history")}</h1>
+          <p>
+            {t("recent_orders_for")} {auth.store_name}.
+          </p>
         </div>
         {auth.is_superadmin && (
           <button
@@ -175,26 +181,26 @@ export function OrdersPage({
               updateQuery({ status: trash ? null : "deleted", order: null });
             }}
           >
-            {trash ? "Active orders" : "Deleted orders"}
+            {trash ? t("active_orders") : t("deleted_orders")}
           </button>
         )}
       </div>
       <div className="table-card">
         <div className="table-head">
-          <strong>{shown.length} orders</strong>
-          <span>Most recent first</span>
+          <strong>{t("order_count", { count: shown.length })}</strong>
+          <span>{t("most_recent_first")}</span>
         </div>
         <div className="orders-scroll">
           <table className="orders-table order-history-table">
             <thead>
               <tr>
-                <th>Reference</th>
-                <th>Buyer</th>
-                <th>Date</th>
-                <th>Cashier</th>
-                <th>Total</th>
+                <th>{t("reference")}</th>
+                <th>{t("buyer")}</th>
+                <th>{t("date")}</th>
+                <th>{t("cashier")}</th>
+                <th>{t("total_label")}</th>
                 <th>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -202,10 +208,11 @@ export function OrdersPage({
               {shown.map((order) => (
                 <tr key={order.id}>
                   <td>
-                    <strong>{order.reference || "Pending sync"}</strong>
+                    <strong>{order.reference || t("pending_sync")}</strong>
                     {order.local && (
                       <small>
-                        Temporary receipt {order.receipt_number.slice(-8)}
+                        {t("temporary_receipt")}{" "}
+                        {order.receipt_number.slice(-8)}
                       </small>
                     )}
                   </td>
@@ -215,9 +222,13 @@ export function OrdersPage({
                     <small>{order.buyer_email}</small>
                   </td>
                   <td>
-                    {new Date(order.completed_at).toLocaleString("en-GB")}
+                    {new Date(order.completed_at).toLocaleString(
+                      formatLocale(),
+                    )}
                   </td>
-                  <td>{order.local ? "Pending sync" : order.cashier_name}</td>
+                  <td>
+                    {order.local ? t("pending_sync") : order.cashier_name}
+                  </td>
                   <td className="order-amount">{money(order.grand_total)}</td>
                   <td>
                     <div className="order-actions">
@@ -226,7 +237,7 @@ export function OrdersPage({
                           className="button secondary"
                           onClick={() => open(order)}
                         >
-                          View
+                          {t("view")}
                         </button>
                       )}
                       {!trash && canEdit && !order.local && (
@@ -234,7 +245,7 @@ export function OrdersPage({
                           className="button secondary"
                           onClick={() => open(order, true)}
                         >
-                          Edit order
+                          {t("edit_order")}
                         </button>
                       )}
                       {order.local &&
@@ -249,7 +260,7 @@ export function OrdersPage({
                               setRepair(order);
                             }}
                           >
-                            Add buyer details
+                            {t("add_buyer_details")}
                           </button>
                         )}
                       {(trash ? auth.is_superadmin : admin) && !order.local && (
@@ -257,7 +268,7 @@ export function OrdersPage({
                           className="button secondary"
                           onClick={() => change(order, trash)}
                         >
-                          {trash ? "Restore" : "Delete order"}
+                          {trash ? t("restore") : t("delete_order")}
                         </button>
                       )}
                     </div>
@@ -269,12 +280,12 @@ export function OrdersPage({
         </div>
         {shown.length === 0 && (
           <div className="empty">
-            <strong>No orders found</strong>
+            <strong>{t("no_orders_found")}</strong>
           </div>
         )}
         {more && (
           <button className="button secondary" onClick={loadMore}>
-            Load more orders
+            {t("load_more_orders")}
           </button>
         )}
       </div>
@@ -282,7 +293,7 @@ export function OrdersPage({
         <div className="overlay">
           <form className="modal" onSubmit={saveBuyer}>
             <div className="modal-head">
-              <h2>Add buyer details</h2>
+              <h2>{t("add_buyer_details")}</h2>
             </div>
             <div className="modal-body">
               <BuyerFields
@@ -298,10 +309,10 @@ export function OrdersPage({
                 disabled={repairBusy}
                 onClick={() => setRepair(null)}
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button className="button primary" disabled={repairBusy}>
-                Save buyer details
+                {t("save_buyer_details")}
               </button>
             </div>
           </form>
@@ -318,18 +329,20 @@ export function OrdersPage({
             className="modal order-detail"
             role="dialog"
             aria-modal="true"
-            aria-label="Order details"
+            aria-label={t("order_details")}
           >
             <div className="modal-head">
               <div>
-                <small>ORDER</small>
-                <h2>{detail.sale.reference || "Pending sync"}</h2>
+                <small>{t("order_label")}</small>
+                <h2>{detail.sale.reference || t("pending_sync")}</h2>
                 <p>
-                  {new Date(detail.sale.completed_at).toLocaleString("en-GB")}
+                  {new Date(detail.sale.completed_at).toLocaleString(
+                    formatLocale(),
+                  )}
                 </p>
               </div>
               <button className="icon-button" onClick={closeDetail}>
-                Close
+                {t("close")}
               </button>
             </div>
             {editing ? (
@@ -345,7 +358,7 @@ export function OrdersPage({
               <>
                 <div className="modal-body">
                   <div className="buyer-summary">
-                    <strong>{detail.sale.buyer_name || "Buyer"}</strong>
+                    <strong>{detail.sale.buyer_name || t("buyer")}</strong>
                     <p>
                       {detail.sale.buyer_phone} {detail.sale.buyer_email}
                     </p>
@@ -364,12 +377,12 @@ export function OrdersPage({
                     </div>
                   ))}
                   <div className="receipt-line">
-                    <span>Subtotal</span>
+                    <span>{t("subtotal")}</span>
                     <strong>{money(detail.sale.subtotal)}</strong>
                   </div>
                   <div className="receipt-line">
                     <span>
-                      Tax{" "}
+                      {t("tax_label")}{" "}
                       {detail.sale.tax_applied
                         ? `(${detail.sale.tax_percentage}%)`
                         : "excluded"}
@@ -377,7 +390,7 @@ export function OrdersPage({
                     <strong>{money(detail.sale.tax_total)}</strong>
                   </div>
                   <div className="receipt-line grand">
-                    <span>Total</span>
+                    <span>{t("total_label")}</span>
                     <strong>{money(detail.sale.grand_total)}</strong>
                   </div>
                   <AuditHistory
@@ -387,7 +400,7 @@ export function OrdersPage({
                 </div>
                 <div className="modal-foot">
                   <button className="button secondary" onClick={closeDetail}>
-                    Close
+                    {t("close")}
                   </button>
                   {canEdit &&
                     !detail.sale.sync_status &&
@@ -396,14 +409,14 @@ export function OrdersPage({
                         className="button secondary"
                         onClick={() => setEditing(true)}
                       >
-                        Edit order
+                        {t("edit_order")}
                       </button>
                     )}
                   <button
                     className="button primary"
                     onClick={() => onPrint(detail)}
                   >
-                    Print receipt
+                    {t("print_receipt")}
                   </button>
                 </div>
               </>

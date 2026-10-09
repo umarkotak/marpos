@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { X } from "lucide-react";
 import { money } from "@/lib/reports";
 export function AddonDialog({
@@ -7,6 +8,7 @@ export function AddonDialog({
   setChoices,
   confirmChoices,
 }) {
+  useI18n();
   return (
     selected && (
       <div
@@ -19,18 +21,20 @@ export function AddonDialog({
           className="modal"
           role="dialog"
           aria-modal="true"
-          aria-label={`Choose add-ons for ${selected.name}`}
+          aria-label={t("choose_product_addons", { product: selected.name })}
         >
           <div className="modal-head">
             <div>
-              <small>ADD-ONS</small>
+              <small>{t("add_ons")}</small>
               <h2>{selected.name}</h2>
-              <p>Base price {money(selected.price)}</p>
+              <p>
+                {t("base_price")} {money(selected.price)}
+              </p>
             </div>
             <button
               className="icon-button"
               onClick={() => setSelected(null)}
-              aria-label="Close"
+              aria-label={t("close")}
             >
               <X size={20} />
             </button>
@@ -40,10 +44,10 @@ export function AddonDialog({
               <div className="choice-group" key={group.id}>
                 <strong>{group.name}</strong>
                 <small>
-                  {group.required ? "Required" : "Optional"} ·{" "}
+                  {group.required ? t("required") : t("optional")} ·{" "}
                   {group.selection_mode === "single"
-                    ? "Choose one"
-                    : "Choose several"}
+                    ? t("choose_one")
+                    : t("choose_several")}
                 </small>
                 {group.options.map((option) => (
                   <label className="choice-option" key={option.id}>
@@ -69,7 +73,7 @@ export function AddonDialog({
                     <strong>
                       {option.price_delta
                         ? `+ ${money(option.price_delta)}`
-                        : "Free"}
+                        : t("free")}
                     </strong>
                   </label>
                 ))}
@@ -81,10 +85,10 @@ export function AddonDialog({
               className="button secondary"
               onClick={() => setSelected(null)}
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button className="button primary" onClick={confirmChoices}>
-              Add to sale
+              {t("add_to_sale")}
             </button>
           </div>
         </section>

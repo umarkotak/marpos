@@ -1,24 +1,26 @@
+import { t, message, translateMessage, useI18n, formatLocale } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { getMeta, putMeta } from "@/lib/local-db";
 import { navigate, updateQuery, useLocation } from "@/lib/navigation";
 import { money } from "@/lib/reports";
 import { api } from "@/lib/api";
 const labels = {
-  "sale.created": "Order created",
-  "sale.corrected": "Order updated",
-  "sale.deleted": "Order deleted",
-  "sale.restored": "Order restored",
+  "sale.created": "order_created",
+  "sale.corrected": "order_updated",
+  "sale.deleted": "order_deleted",
+  "sale.restored": "order_restored",
 };
 const timestamp = (value) =>
-  new Date(value).toLocaleString("en-GB", { timeZone: "Asia/Jakarta" });
+  new Date(value).toLocaleString(formatLocale(), { timeZone: "Asia/Jakarta" });
 export function AuditLogPage({ db, auth }) {
+  useI18n();
   const { query } = useLocation();
   const action = query.get("action") || "",
     from = query.get("from") || "",
     to = query.get("to") || "";
   const offset = Math.max(0, Number(query.get("offset")) || 0);
   const [rows, setRows] = useState([]),
-    [status, setStatus] = useState("Loading audit log…"),
+    [status, setStatus] = useState(message("loading_audit_log")),
     [refresh, setRefresh] = useState(0);
   const params = new URLSearchParams({
     action,
@@ -29,7 +31,7 @@ export function AuditLogPage({ db, auth }) {
   useEffect(() => {
     let active = true;
     setRows([]);
-    setStatus("Loading audit log…");
+    setStatus(message("loading_audit_log"));
     async function load() {
       const key = `audit:${auth.store_id}:${params}`;
       try {
@@ -38,7 +40,7 @@ export function AuditLogPage({ db, auth }) {
           await putMeta(db, key, { rows, saved_at: new Date().toISOString() });
         if (active) {
           setRows(rows);
-          setStatus("Up to date. Dates use WIB.");
+          setStatus(message("up_to_date_dates_use_wib"));
         }
       } catch (error) {
         if (!active) return;
@@ -51,14 +53,14 @@ export function AuditLogPage({ db, auth }) {
           setRows(saved?.rows || []);
           setStatus(
             saved
-              ? `Offline · Saved ${timestamp(saved.saved_at)} WIB.`
+              ? message("offline_saved", { saved: new Date(saved.saved_at) })
               : error.message,
           );
         }
       }
     }
     load().catch(() => {
-      if (active) setStatus("Could not load the audit log.");
+      if (active) setStatus(message("could_not_load_the_audit_log"));
     });
     return () => {
       active = false;
@@ -68,31 +70,32 @@ export function AuditLogPage({ db, auth }) {
   return (
     <section className="products-page">
       <div className="page-heading">
-        <small>STORE ACTIVITY</small>
-        <h1>Audit log</h1>
+        <small>{t("store_activity")}</small>
+        <h1>{t("audit_log")}</h1>
         <p>
-          See who changed orders and when. Audit records stay after an order is
-          deleted.
+          {t(
+            "see_who_changed_orders_and_when_audit_records_stay_after_an_order_is_deleted",
+          )}
         </p>
       </div>
       <div className="heading-row">
         <div className="report-filter">
           <label>
-            Action
+            {t("action")}
             <select
               value={action}
               onChange={(e) => filter({ action: e.target.value })}
             >
-              <option value="">All actions</option>
+              <option value="">{t("all_actions")}</option>
               {Object.entries(labels).map(([key, label]) => (
                 <option key={key} value={key}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            From
+            {t("from")}
             <input
               type="date"
               max={to || undefined}
@@ -101,7 +104,7 @@ export function AuditLogPage({ db, auth }) {
             />
           </label>
           <label>
-            To
+            {t("to")}
             <input
               type="date"
               min={from || undefined}
@@ -114,19 +117,19 @@ export function AuditLogPage({ db, auth }) {
           className="button secondary"
           onClick={() => setRefresh((n) => n + 1)}
         >
-          Refresh log
+          {t("refresh_log")}
         </button>
       </div>
-      <p role="status">{status}</p>
+      <p role="status">{translateMessage(status)}</p>
       <div className="table-card orders-scroll">
         <table className="orders-table">
           <thead>
             <tr>
-              <th>Time (WIB)</th>
-              <th>Who</th>
-              <th>Action</th>
-              <th>Order</th>
-              <th>Details</th>
+              <th>{t("time_wib")}</th>
+              <th>{t("who")}</th>
+              <th>{t("action")}</th>
+              <th>{t("order")}</th>
+              <th>{t("details")}</th>
             </tr>
           </thead>
           <tbody>
@@ -137,7 +140,9 @@ export function AuditLogPage({ db, auth }) {
                   <strong>{row.actor_name}</strong>
                   <small>{row.actor_email}</small>
                 </td>
-                <td>{labels[row.action] || row.action}</td>
+                <td>
+                  {labels[row.action] ? t(labels[row.action]) : row.action}
+                </td>
                 <td>
                   {row.entity_type === "sale" &&
                   (!row.entity_deleted || auth.is_superadmin) ? (
@@ -155,13 +160,14 @@ export function AuditLogPage({ db, auth }) {
                   ) : (
                     row.reference
                   )}
-                  {row.entity_deleted && <small>Deleted</small>}
+                  {row.entity_deleted && <small>{t("deleted")}</small>}
                 </td>
                 <td>
                   {row.metadata.reason || "—"}
                   {row.metadata.revision && (
                     <small>
-                      Revision {row.metadata.revision} · Cash adjustment{" "}
+                      {t("revision")} {row.metadata.revision}{" "}
+                      {t("cash_adjustment_label")}{" "}
                       {money(row.metadata.cash_delta)}
                     </small>
                   )}
@@ -171,7 +177,7 @@ export function AuditLogPage({ db, auth }) {
           </tbody>
         </table>
         {!rows.length && (
-          <div className="empty">No audit events in this period.</div>
+          <div className="empty">{t("no_audit_events_in_this_period")}</div>
         )}
       </div>
       <div className="form-actions">
@@ -182,15 +188,17 @@ export function AuditLogPage({ db, auth }) {
             updateQuery({ offset: Math.max(0, offset - 50) }, false)
           }
         >
-          Previous
+          {t("previous")}
         </button>
-        <span>Page {Math.floor(offset / 50) + 1}</span>
+        <span>
+          {t("page")} {Math.floor(offset / 50) + 1}
+        </span>
         <button
           className="button secondary"
           disabled={rows.length < 50}
           onClick={() => updateQuery({ offset: offset + 50 }, false)}
         >
-          Next
+          {t("next")}
         </button>
       </div>
     </section>

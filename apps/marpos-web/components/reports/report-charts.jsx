@@ -1,30 +1,36 @@
+import { t, message, useI18n, formatLocale } from "@/lib/i18n";
 import { money, emptyTotals, addTotals, shiftDate } from "@/lib/reports";
 import { useEffect, useRef, useState } from "react";
 
 export function ReportSummary({ rows, earningsMode = "gross" }) {
+  useI18n();
   const total = rows.reduce((sum, row) => addTotals(sum, row), emptyTotals());
   const cards = [
     [
-      earningsMode === "gross" ? "Gross earnings" : "Net earnings",
+      earningsMode === "gross" ? t("gross_earnings") : t("net_earnings"),
       earningsMode === "gross"
         ? money(total.revenue)
         : total.missing_costs
-          ? "Incomplete"
+          ? t("incomplete")
           : money(total.net),
       earningsMode === "gross"
-        ? "Sales before tax"
-        : "After production costs, other income, and expenses",
-    ],
-    ["Orders", total.orders.toLocaleString("en-GB"), "Completed orders"],
-    [
-      "Products sold",
-      total.units.toLocaleString("en-GB"),
-      "Units across all products",
+        ? t("sales_before_tax")
+        : t("after_production_costs_other_income_and_expenses"),
     ],
     [
-      "Average order",
+      t("orders_label"),
+      total.orders.toLocaleString(formatLocale()),
+      t("completed_orders"),
+    ],
+    [
+      t("products_sold"),
+      total.units.toLocaleString(formatLocale()),
+      t("units_across_all_products"),
+    ],
+    [
+      t("average_order"),
       money(total.orders ? total.revenue / total.orders : 0),
-      "Sales before tax per order",
+      t("sales_before_tax_per_order"),
     ],
   ];
   return (
@@ -43,23 +49,22 @@ export function ReportSummary({ rows, earningsMode = "gross" }) {
       </div>
       {earningsMode === "net" && total.missing_costs > 0 && (
         <p className="message">
-          {total.missing_costs} sale items have no saved cost. Net earnings are
-          incomplete.
+          {t("missing_sale_costs", { count: total.missing_costs })}
         </p>
       )}
       <div className="report-cost-strip">
         <span>
-          Production cost{" "}
-          <b>{total.missing_costs ? "Incomplete" : money(total.cost)}</b>
+          {t("production_cost")}{" "}
+          <b>{total.missing_costs ? t("incomplete") : money(total.cost)}</b>
         </span>
         <span>
-          Other income <b>{money(total.income)}</b>
+          {t("other_income")} <b>{money(total.income)}</b>
         </span>
         <span>
-          Expenses <b>{money(total.expense)}</b>
+          {t("expenses")} <b>{money(total.expense)}</b>
         </span>
         <span>
-          Tax collected <b>{money(total.tax)}</b>
+          {t("tax_collected")} <b>{money(total.tax)}</b>
         </span>
       </div>
     </>
@@ -74,6 +79,7 @@ export function TrendChart({
   onSelect,
   hourly = false,
 }) {
+  useI18n();
   const container = useRef(null);
   const [width, setWidth] = useState(660);
   const [active, setActive] = useState(null);
@@ -103,11 +109,12 @@ export function TrendChart({
     top + (1 - value / unitHigh) * (height - top - bottom);
   const labelEvery = Math.max(1, Math.ceil(48 / step));
   const unitLabel = (value) =>
-    new Intl.NumberFormat("en-GB", {
+    new Intl.NumberFormat(formatLocale(), {
       notation: "compact",
       maximumFractionDigits: 1,
     }).format(value);
-  const earningsLabel = metric === "net" ? "Net earnings" : "Gross earnings";
+  const earningsLabel =
+    metric === "net" ? t("net_earnings") : t("gross_earnings");
   return (
     <section className="report-panel">
       <div className="report-panel-heading">
@@ -119,11 +126,11 @@ export function TrendChart({
       <div className="trend-legend">
         <span>
           <i className="earnings-key" />
-          {earningsLabel} · left axis (IDR)
+          {earningsLabel} {t("left_axis_idr")}
         </span>
         <span>
           <i className="units-key" />
-          Products sold · right axis (units)
+          {t("products_sold_right_axis_units")}
         </span>
       </div>
       <div className="trend-chart" ref={container}>
@@ -135,11 +142,12 @@ export function TrendChart({
             <span>
               {earningsLabel}:{" "}
               {values[active] === null
-                ? "Incomplete costs"
+                ? t("incomplete_costs")
                 : money(values[active])}
             </span>
             <span>
-              Products sold: {rows[active].units.toLocaleString("en-GB")}
+              {t("products_sold_label")}{" "}
+              {rows[active].units.toLocaleString(formatLocale())}
             </span>
           </div>
         )}
@@ -262,7 +270,12 @@ export function TrendChart({
           )}
           {rows.map((row, i) => {
             const value = values[i],
-              label = `${row.label}: ${value === null ? "Incomplete costs" : money(value)} ${earningsLabel.toLowerCase()}, ${row.units} products sold`;
+              label = t("chart_point", {
+                date: row.label,
+                value: value === null ? t("incomplete_costs") : money(value),
+                earnings: earningsLabel.toLowerCase(),
+                units: row.units,
+              });
             return (
               <rect
                 key={row.label}
@@ -274,7 +287,11 @@ export function TrendChart({
                 fill="transparent"
                 role={onSelect ? "button" : undefined}
                 tabIndex={onSelect ? 0 : undefined}
-                aria-label={onSelect ? `${label}. Open day report.` : label}
+                aria-label={
+                  onSelect
+                    ? t("open_day_report_label", { label: label })
+                    : label
+                }
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
                 onBlur={() => setActive(null)}
@@ -292,17 +309,18 @@ export function TrendChart({
       </div>
       <p className="chart-help">
         {onSelect
-          ? "Select a date to view its hourly report. "
-          : "Each bar covers one hour in WIB. "}
+          ? t("select_a_date_to_view_its_hourly_report")
+          : t("each_bar_covers_one_hour_in_wib")}
         {metric === "net"
-          ? "Red bars show a loss. Grey bars have incomplete costs."
-          : "Hover over a bar area to see both values."}
+          ? t("red_bars_show_a_loss_grey_bars_have_incomplete_costs")
+          : t("hover_over_a_bar_area_to_see_both_values")}
       </p>
     </section>
   );
 }
 
 export function ProductSales({ rows, earningsMode = "gross" }) {
+  useI18n();
   const products = new Map();
   for (const row of rows) {
     if (!products.has(row.product_id))
@@ -325,30 +343,35 @@ export function ProductSales({ rows, earningsMode = "gross" }) {
     <section className="report-panel">
       <div className="report-panel-heading">
         <div>
-          <h2>Products sold</h2>
+          <h2>{t("products_sold")}</h2>
           <p>
-            Ranked by units sold. Includes selected add-on prices
-            {earningsMode === "net" ? " and costs" : ""}.
+            {t(
+              earningsMode === "net"
+                ? "product_ranking_costs"
+                : "product_ranking_prices",
+            )}
           </p>
         </div>
-        <span className="report-unit">{ranked.length} products</span>
+        <span className="report-unit">
+          {t("product_count", { count: ranked.length })}
+        </span>
       </div>
       <div className="orders-scroll">
         <table className="orders-table report-table">
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Units sold</th>
-              <th>Share of units</th>
+              <th>{t("product")}</th>
+              <th>{t("units_sold")}</th>
+              <th>{t("share_of_units")}</th>
               <th>
                 {earningsMode === "gross"
-                  ? "Gross earnings"
-                  : "Sales before tax"}
+                  ? t("gross_earnings")
+                  : t("sales_before_tax")}
               </th>
               {earningsMode === "net" && (
                 <>
-                  <th>Production cost</th>
-                  <th>Profit after cost</th>
+                  <th>{t("production_cost")}</th>
+                  <th>{t("profit_after_cost")}</th>
                 </>
               )}
             </tr>
@@ -360,7 +383,7 @@ export function ProductSales({ rows, earningsMode = "gross" }) {
                   <strong>{row.name}</strong>
                   <small>{row.sku}</small>
                 </td>
-                <td>{row.units.toLocaleString("en-GB")}</td>
+                <td>{row.units.toLocaleString(formatLocale())}</td>
                 <td>
                   <span className="product-share">
                     <i
@@ -375,11 +398,11 @@ export function ProductSales({ rows, earningsMode = "gross" }) {
                 {earningsMode === "net" && (
                   <>
                     <td>
-                      {row.missing_costs ? "Incomplete" : money(row.cost)}
+                      {row.missing_costs ? t("incomplete") : money(row.cost)}
                     </td>
                     <td>
                       {row.missing_costs
-                        ? "Incomplete"
+                        ? t("incomplete")
                         : money(row.revenue - row.cost)}
                     </td>
                   </>
@@ -390,7 +413,7 @@ export function ProductSales({ rows, earningsMode = "gross" }) {
         </table>
       </div>
       {!ranked.length && (
-        <div className="empty">No products sold in this period.</div>
+        <div className="empty">{t("no_products_sold_in_this_period")}</div>
       )}
     </section>
   );
@@ -402,6 +425,7 @@ export function ReportInsights({
   hourly = false,
   earningsMode = "gross",
 }) {
+  useI18n();
   const total = rows.reduce((sum, row) => addTotals(sum, row), emptyTotals());
   const best = [...rows]
     .filter((row) => row.orders > 0)
@@ -424,26 +448,35 @@ export function ReportInsights({
   return (
     <div className="report-insights">
       <div>
-        <small>{hourly ? "Strongest sales hour" : "Strongest sales day"}</small>
-        <strong>{best ? best.label : "No sales yet"}</strong>
+        <small>
+          {hourly ? t("strongest_sales_hour") : t("strongest_sales_day")}
+        </small>
+        <strong>{best ? best.label : t("no_sales_yet")}</strong>
         <p>
           {best
-            ? `${money(best.revenue)} before tax`
-            : "Complete a sale to see this insight."}
+            ? t("amount_before_tax", { amount: money(best.revenue) })
+            : t("complete_a_sale_to_see_this_insight")}
         </p>
       </div>
       <div>
-        <small>Busiest sales hour</small>
+        <small>{t("busiest_sales_hour")}</small>
         <strong>{peak ? `${peak[0]}:00–${peak[0]}:59 WIB` : "—"}</strong>
         <p>
           {peak
-            ? `${peak[1].orders} order${peak[1].orders === 1 ? "" : "s"} ${hourly ? "on this day" : "across the selected period"}`
-            : "Measured by completed orders."}
+            ? t("busy_hour_orders", {
+                orders: message("order_count", { count: peak[1].orders }),
+                period: message(
+                  hourly ? "on_this_day" : "across_the_selected_period",
+                ),
+              })
+            : t("measured_by_completed_orders")}
         </p>
       </div>
       <div>
         <small>
-          {earningsMode === "gross" ? "Average sale per unit" : "Gross margin"}
+          {earningsMode === "gross"
+            ? t("average_sale_per_unit")
+            : t("gross_margin")}
         </small>
         <strong>
           {earningsMode === "gross"
@@ -452,8 +485,8 @@ export function ReportInsights({
         </strong>
         <p>
           {earningsMode === "gross"
-            ? "Sales before tax divided by units sold."
-            : "Sales less production cost, before other income and expenses."}
+            ? t("sales_before_tax_divided_by_units_sold")
+            : t("sales_less_production_cost_before_other_income_and_expenses")}
         </p>
       </div>
     </div>
@@ -467,6 +500,7 @@ export function ComparisonChart({
   onMetric,
   onSelect,
 }) {
+  useI18n();
   const weekday = (new Date(`${endDate}T00:00:00Z`).getUTCDay() + 6) % 7;
   const monday = shiftDate(endDate, -weekday);
   const weeks = [0, 1, 2, 3].map((week) => ({
@@ -483,27 +517,25 @@ export function ComparisonChart({
   );
   const format = (row) =>
     metric === "net" && row?.missing_costs
-      ? "Incomplete"
+      ? t("incomplete")
       : metric === "orders" || metric === "units"
-        ? (row?.[metric] || 0).toLocaleString("en-GB")
+        ? (row?.[metric] || 0).toLocaleString(formatLocale())
         : money(row?.[metric] || 0);
   return (
     <section className="report-panel report-chart">
       <div className="report-panel-heading">
         <div>
-          <h2>Weekday comparison</h2>
-          <p>
-            Four weeks ending {endDate}. Days after the end date are excluded.
-          </p>
+          <h2>{t("weekday_comparison")}</h2>
+          <p>{t("four_weeks_ending", { date: endDate })} </p>
         </div>
         <label>
-          Compare
+          {t("compare")}
           <select value={metric} onChange={(e) => onMetric(e.target.value)}>
-            <option value="revenue">Gross earnings</option>
-            <option value="net">Net earnings</option>
-            <option value="units">Products sold</option>
-            <option value="orders">Orders</option>
-            <option value="expense">Expenses</option>
+            <option value="revenue">{t("gross_earnings")}</option>
+            <option value="net">{t("net_earnings")}</option>
+            <option value="units">{t("products_sold")}</option>
+            <option value="orders">{t("orders_label")}</option>
+            <option value="expense">{t("expenses")}</option>
           </select>
         </label>
       </div>
@@ -512,14 +544,21 @@ export function ComparisonChart({
           <span key={week.start}>
             <i style={{ background: week.color }} />
             {i === 0
-              ? "Selected week"
-              : `${i} week${i === 1 ? "" : "s"} earlier`}{" "}
-            · {week.start}
+              ? t("selected_week")
+              : t("week_count", { count: i })} · {week.start}
           </span>
         ))}
       </div>
       <div className="comparison-grid">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => (
+        {[
+          t("mon"),
+          t("tue"),
+          t("wed"),
+          t("thu"),
+          t("fri"),
+          t("sat"),
+          t("sun"),
+        ].map((day, i) => (
           <div className="comparison-day" key={day}>
             <div className="comparison-bars">
               {weeks.map((week) => {
@@ -537,7 +576,10 @@ export function ComparisonChart({
                       height: `${incomplete ? 3 : Math.max(3, (Math.abs(value) / max) * 155)}px`,
                       background: incomplete ? "#c4ceca" : week.color,
                     }}
-                    aria-label={`${date}: ${format(row)}. Open day report.`}
+                    aria-label={t("open_date_report", {
+                      date: date,
+                      value: format(row),
+                    })}
                     title={`${date}: ${format(row)}`}
                     onClick={() => onSelect(date)}
                   />
@@ -549,28 +591,31 @@ export function ComparisonChart({
         ))}
       </div>
       <p className="chart-help">
-        Select a bar to open the day report. Striped bars show a loss. The
-        selected week is partial when the end date is before Sunday.
+        {t(
+          "select_a_bar_to_open_the_day_report_striped_bars_show_a_loss_the_selected_week_is_partial_when_the_end_date_is_before_sunday",
+        )}
       </p>
       <div className="orders-scroll">
         <table className="orders-table report-table">
           <thead>
             <tr>
-              <th>Weekday</th>
+              <th>{t("weekday")}</th>
               {weeks.map((week) => (
-                <th key={week.start}>Week of {week.start}</th>
+                <th key={week.start}>
+                  {t("week_of")} {week.start}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {[
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-              "Sunday",
+              t("monday"),
+              t("tuesday"),
+              t("wednesday"),
+              t("thursday"),
+              t("friday"),
+              t("saturday"),
+              t("sunday"),
             ].map((day, i) => (
               <tr key={day}>
                 <td>{day}</td>

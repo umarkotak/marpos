@@ -1,10 +1,12 @@
+import { t, useI18n } from "@/lib/i18n";
 import { shiftDate, storeDate } from "@/lib/reports";
 export function RangeFilter({ range, onChange }) {
+  useI18n();
   const today = storeDate();
   return (
     <div className="report-filter">
       <label>
-        Period
+        {t("period")}
         <select
           value={range.days}
           onChange={(event) => {
@@ -22,17 +24,17 @@ export function RangeFilter({ range, onChange }) {
             );
           }}
         >
-          <option value="7">Last 7 days</option>
-          <option value="14">Last 14 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="last">Last X days</option>
-          <option value="custom">Custom dates</option>
+          <option value="7">{t("last_7_days")}</option>
+          <option value="14">{t("last_14_days")}</option>
+          <option value="30">{t("last_30_days")}</option>
+          <option value="90">{t("last_90_days")}</option>
+          <option value="last">{t("last_x_days")}</option>
+          <option value="custom">{t("custom_dates")}</option>
         </select>
       </label>
       {range.days === "last" && (
         <label>
-          Days
+          {t("days")}
           <input
             type="number"
             min="1"
@@ -58,7 +60,7 @@ export function RangeFilter({ range, onChange }) {
         </label>
       )}
       <label>
-        From
+        {t("from")}
         <input
           type="date"
           required
@@ -70,7 +72,7 @@ export function RangeFilter({ range, onChange }) {
         />
       </label>
       <label>
-        To
+        {t("to")}
         <input
           type="date"
           required

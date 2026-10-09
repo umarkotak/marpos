@@ -1,21 +1,28 @@
+import { t, useI18n, formatLocale } from "@/lib/i18n";
 import { money } from "@/lib/reports";
 export function PrintReceipt({ detail, storeName }) {
+  useI18n();
   if (!detail) return null;
   const { sale, items } = detail;
   return (
     <section className="print-receipt">
       <h1>{storeName}</h1>
       <p>
-        {sale.reference || `Temporary receipt ${sale.receipt_number}`}
+        {sale.reference ||
+          t("temporary_receipt_number", { number: sale.receipt_number })}
         <br />
-        {new Date(sale.completed_at).toLocaleString("en-GB")}
+        {new Date(sale.completed_at).toLocaleString(formatLocale())}
       </p>
       <p>
         {[sale.buyer_name, sale.buyer_phone, sale.buyer_email]
           .filter(Boolean)
           .join(" · ")}
       </p>
-      {sale.revision > 0 && <p>Corrected order · Revision {sale.revision}</p>}
+      {sale.revision > 0 && (
+        <p>
+          {t("corrected_order_revision")} {sale.revision}
+        </p>
+      )}
       <hr />
       {items.map((item) => (
         <div key={item.id}>
@@ -36,18 +43,18 @@ export function PrintReceipt({ detail, storeName }) {
       ))}
       <hr />
       <div className="receipt-line">
-        <span>Subtotal</span>
+        <span>{t("subtotal")}</span>
         <span>{money(sale.subtotal)}</span>
       </div>
       <div className="receipt-line">
-        <span>Tax</span>
+        <span>{t("tax_label")}</span>
         <span>{money(sale.tax_total)}</span>
       </div>
       <div className="receipt-line grand">
-        <span>Total</span>
+        <span>{t("total_label")}</span>
         <span>{money(sale.grand_total)}</span>
       </div>
-      <p>Thank you.</p>
+      <p>{t("thank_you")}</p>
     </section>
   );
 }

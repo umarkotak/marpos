@@ -1,3 +1,4 @@
+import { t, message, translateMessage, useI18n, formatLocale } from "@/lib/i18n";
 import { updateQuery, useLocation } from "@/lib/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMeta, localFinance, localSales, putMeta } from "@/lib/local-db";
@@ -29,24 +30,27 @@ function ReportDataTable({
   hourly = false,
   earningsMode = "gross",
 }) {
+  useI18n();
   return (
     <div className="table-card orders-scroll">
       <table className="orders-table report-table">
         <thead>
           <tr>
-            <th>{hourly ? "Hour (WIB)" : "Date (WIB)"}</th>
-            <th>Orders</th>
-            <th>Units sold</th>
+            <th>{hourly ? t("hour_wib") : t("date_wib")}</th>
+            <th>{t("orders_label")}</th>
+            <th>{t("units_sold")}</th>
             {earningsMode === "net" && (
               <>
-                <th>Sales before tax</th>
-                <th>Costs</th>
-                <th>Income</th>
-                <th>Expenses</th>
+                <th>{t("sales_before_tax")}</th>
+                <th>{t("costs")}</th>
+                <th>{t("income")}</th>
+                <th>{t("expenses")}</th>
               </>
             )}
             <th>
-              {earningsMode === "gross" ? "Gross earnings" : "Net earnings"}
+              {earningsMode === "gross"
+                ? t("gross_earnings")
+                : t("net_earnings")}
             </th>
           </tr>
         </thead>
@@ -66,11 +70,13 @@ function ReportDataTable({
                 )}
               </td>
               <td>{row.orders}</td>
-              <td>{row.units.toLocaleString("en-GB")}</td>
+              <td>{row.units.toLocaleString(formatLocale())}</td>
               {earningsMode === "net" && (
                 <>
                   <td>{money(row.revenue)}</td>
-                  <td>{row.missing_costs ? "Incomplete" : money(row.cost)}</td>
+                  <td>
+                    {row.missing_costs ? t("incomplete") : money(row.cost)}
+                  </td>
                   <td>{money(row.income)}</td>
                   <td>{money(row.expense)}</td>
                 </>
@@ -79,7 +85,7 @@ function ReportDataTable({
                 {earningsMode === "gross"
                   ? money(row.revenue)
                   : row.missing_costs
-                    ? "Incomplete"
+                    ? t("incomplete")
                     : money(row.net)}
               </td>
             </tr>
@@ -91,10 +97,11 @@ function ReportDataTable({
 }
 
 export function ReportsPage({ db, auth, pending }) {
+  useI18n();
   const [range, setRange] = useRange();
   const [hours, setHours] = useState([]);
   const [products, setProducts] = useState([]);
-  const [status, setStatus] = useState("Loading report…");
+  const [status, setStatus] = useState(message("loading_report"));
   const { pathname, query } = useLocation();
   const reportTab =
     pathname === "/reports/comparison" || query.get("view") === "comparison"
@@ -179,7 +186,7 @@ export function ReportsPage({ db, auth, pending }) {
     async function load() {
       if (!db || !valid) return;
       setBusy(true);
-      setStatus("Loading report…");
+      setStatus(message("loading_report"));
       const key = `report:${auth.store_id}:${loadRange.from}:${loadRange.to}:${today}`;
       try {
         let cached = await getMeta(db, key),
@@ -216,14 +223,18 @@ export function ReportsPage({ db, auth, pending }) {
           setProducts(productData);
           setStatus(
             online
-              ? "Up to date · Includes pending records on this device."
+              ? message("up_to_date_includes_pending_records_on_this_device")
               : cached
-                ? `Offline · Saved ${new Date(cached.generated_at).toLocaleString("en-GB", { timeZone: "Asia/Jakarta" })}. Includes local records.`
-                : "Offline · Only records on this device are available. This is a partial report.",
+                ? message("offline_report_saved", {
+                    saved: new Date(cached.generated_at),
+                  })
+                : message(
+                    "offline_only_records_on_this_device_are_available_this_is_a_partial_report",
+                  ),
           );
           if (cached && !cached.products)
-            setStatus(
-              (text) => `${text} Product detail needs an online refresh.`,
+            setStatus((text) =>
+              message("report_product_refresh", { status: text }),
             );
         }
       } catch (error) {
@@ -286,38 +297,38 @@ export function ReportsPage({ db, auth, pending }) {
       disabled={busy || !valid}
       onClick={() => setRefresh((n) => n + 1)}
     >
-      {busy ? "Loading…" : "Refresh report"}
+      {busy ? t("loading") : t("refresh_report")}
     </button>
   );
   const earningsTabs = (
     <div
       className="report-tabs earnings-tabs"
       role="group"
-      aria-label="Earnings view"
+      aria-label={t("earnings_view")}
     >
       <button
         className={earningsMode === "gross" ? "active" : ""}
         aria-pressed={earningsMode === "gross"}
         onClick={() => changeEarningsMode("gross")}
       >
-        Gross earnings
+        {t("gross_earnings")}
       </button>
       <button
         className={earningsMode === "net" ? "active" : ""}
         aria-pressed={earningsMode === "net"}
         onClick={() => changeEarningsMode("net")}
       >
-        Net earnings
+        {t("net_earnings")}
       </button>
     </div>
   );
   if (pathname.startsWith("/reports/day/") && !selected)
     return (
       <section className="products-page">
-        <h1>Invalid report date</h1>
-        <p>Use a valid date, ending today or earlier.</p>
+        <h1>{t("invalid_report_date")}</h1>
+        <p>{t("use_a_valid_date_ending_today_or_earlier")}</p>
         <button className="button secondary" onClick={returnToReport}>
-          Back to reports
+          {t("back_to_reports")}
         </button>
       </section>
     );
@@ -325,30 +336,37 @@ export function ReportsPage({ db, auth, pending }) {
     return (
       <section className="products-page reports-page">
         <button className="link-button report-back" onClick={returnToReport}>
-          ← Back to {reportTab === "overview" ? "overview" : "comparison"}
+          {t(
+            reportTab === "overview"
+              ? "back_to_overview"
+              : "back_to_comparison",
+          )}
         </button>
         <div className="page-heading heading-row">
           <div>
-            <small>DAY REPORT · WIB</small>
+            <small>{t("day_report_wib")}</small>
             <h1 ref={heading} tabIndex={-1}>
-              {new Date(`${selected}T00:00:00Z`).toLocaleDateString("en-GB", {
-                timeZone: "UTC",
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {new Date(`${selected}T00:00:00Z`).toLocaleDateString(
+                formatLocale(),
+                {
+                  timeZone: "UTC",
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                },
+              )}
             </h1>
             <p>
-              {selected === today ? "Today is still in progress. " : ""}Sales,
-              products, and earnings for this day.
+              {selected === today ? t("today_is_still_in_progress") : ""}
+              {t("sales_products_and_earnings_for_this_day")}
             </p>
           </div>
           {refreshButton}
         </div>
         {earningsTabs}
         <p className="report-status" role="status">
-          {status}
+          {translateMessage(status)}
         </p>
         <ReportSummary rows={hourly} earningsMode={earningsMode} />
         <ReportInsights
@@ -360,11 +378,11 @@ export function ReportsPage({ db, auth, pending }) {
         <TrendChart
           rows={hourly}
           metric={earningsMode === "gross" ? "revenue" : "net"}
-          title="Hourly earnings and products sold"
+          title={t("hourly_earnings_and_products_sold")}
           subtitle={
             earningsMode === "gross"
-              ? "Sales before tax and units sold."
-              : "Net earnings and units sold."
+              ? t("sales_before_tax_and_units_sold")
+              : t("net_earnings_and_units_sold")
           }
           hourly
         />
@@ -373,8 +391,8 @@ export function ReportsPage({ db, auth, pending }) {
           earningsMode={earningsMode}
         />
         <div className="page-heading">
-          <h2>Hourly detail</h2>
-          <p>All 24 hours in Asia/Jakarta (WIB).</p>
+          <h2>{t("hourly_detail")}</h2>
+          <p>{t("all_24_hours_in_asia_jakarta_wib")}</p>
         </div>
         <ReportDataTable rows={hourly} hourly earningsMode={earningsMode} />
       </section>
@@ -382,26 +400,28 @@ export function ReportsPage({ db, auth, pending }) {
   return (
     <section className="products-page reports-page">
       <div className="page-heading">
-        <small>STORE PERFORMANCE</small>
+        <small>{t("store_performance")}</small>
         <h1 ref={heading} tabIndex={-1}>
-          Reports
+          {t("reports")}
         </h1>
-        <p>Understand earnings, product demand, and daily sales patterns.</p>
+        <p>
+          {t("understand_earnings_product_demand_and_daily_sales_patterns")}
+        </p>
       </div>
-      <div className="report-tabs" role="group" aria-label="Report views">
+      <div className="report-tabs" role="group" aria-label={t("report_views")}>
         <button
           className={reportTab === "overview" ? "active" : ""}
           aria-pressed={reportTab === "overview"}
           onClick={() => changeTab("overview")}
         >
-          Overview
+          {t("overview")}
         </button>
         <button
           className={reportTab === "comparison" ? "active" : ""}
           aria-pressed={reportTab === "comparison"}
           onClick={() => changeTab("comparison")}
         >
-          Comparison
+          {t("comparison")}
         </button>
       </div>
       {earningsTabs}
@@ -410,11 +430,11 @@ export function ReportsPage({ db, auth, pending }) {
         {refreshButton}
       </div>
       <p className="report-status" role="status">
-        {status} Dates use WIB.
+        {translateMessage(status)} {t("dates_use_wib")}
       </p>
       {!valid ? (
         <p className="message">
-          Select up to 366 days, ending today or earlier.
+          {t("select_up_to_366_days_ending_today_or_earlier")}
         </p>
       ) : (
         <>
@@ -429,8 +449,8 @@ export function ReportsPage({ db, auth, pending }) {
               <TrendChart
                 rows={days}
                 metric={earningsMode === "gross" ? "revenue" : "net"}
-                title="Daily earnings and products sold"
-                subtitle={`${range.from} to ${range.to}`}
+                title={t("daily_earnings_and_products_sold")}
+                subtitle={t("date_period", { from: range.from, to: range.to })}
                 onSelect={openDay}
               />
               <ProductSales rows={periodProducts} earningsMode={earningsMode} />
@@ -445,10 +465,11 @@ export function ReportsPage({ db, auth, pending }) {
             />
           )}
           <div className="page-heading">
-            <h2>Daily detail</h2>
+            <h2>{t("daily_detail")}</h2>
             <p>
-              Select a date to open its day summary and hourly charts. Earnings
-              exclude tax.
+              {t(
+                "select_a_date_to_open_its_day_summary_and_hourly_charts_earnings_exclude_tax",
+              )}
             </p>
           </div>
           <ReportDataTable

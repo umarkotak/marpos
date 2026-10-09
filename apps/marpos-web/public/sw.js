@@ -1,8 +1,10 @@
-const cacheName = "marpos-app-v6";
+const cacheName = "marpos-app-v7";
 const imageCacheName = "marpos-images-v1";
 const shell = [
   "/",
   "/offline.html",
+  "/locales/en.json",
+  "/locales/id.json",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -182,6 +184,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/locales/") ||
     url.pathname === "/manifest.webmanifest"
   ) {
     event.respondWith(

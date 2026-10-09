@@ -1,3 +1,4 @@
+import { t, message } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { getMeta, putMeta, saveSale } from "@/lib/local-db";
 import { blankBuyer } from "@/components/buyer-fields";
@@ -35,7 +36,9 @@ export function useOrderDrafts(db, auth, onNotice) {
         })
         .catch(() =>
           onNotice(
-            "Could not load held orders. Reload before you enter a sale.",
+            message(
+              "could_not_load_held_orders_reload_before_you_enter_a_sale",
+            ),
           ),
         );
     return () => {
@@ -60,7 +63,9 @@ export function useOrderDrafts(db, auth, onNotice) {
       },
       () => {
         if (writes.current === pending) setSaving(false);
-        onNotice("Draft was not saved. Keep this page open and try again.");
+        onNotice(
+          message("draft_was_not_saved_keep_this_page_open_and_try_again"),
+        );
       },
     );
   }
@@ -98,7 +103,7 @@ export function useOrderDrafts(db, auth, onNotice) {
     if (ready) save({ ...current.current, active_id: id });
   }
   function discard(id) {
-    if (!confirm("Discard this unfinished order?")) return;
+    if (!confirm(t("discard_this_unfinished_order"))) return;
     const rows = current.current.drafts.filter((row) => row.id !== id);
     save(
       rows.length

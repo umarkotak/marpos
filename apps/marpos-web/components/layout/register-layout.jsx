@@ -1,3 +1,5 @@
+import { t, translateMessage, useI18n } from "@/lib/i18n";
+import { LanguageSelect } from "@/components/language-select";
 import { LoginScreen } from "@/components/auth/login-screen";
 import Head from "next/head";
 import { CloudUpload, LogOut, X } from "lucide-react";
@@ -13,6 +15,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 export function RegisterLayout({ children }) {
+  useI18n();
   const {
     auth,
     stores,
@@ -39,11 +42,11 @@ export function RegisterLayout({ children }) {
   return (
     <>
       <Head>
-        <title>Marpos · Point of Sale</title>
+        <title>{t("marpos_point_of_sale")}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta
           name="description"
-          content="Marpos keeps store sales available offline."
+          content={t("marpos_keeps_store_sales_available_offline")}
         />
         <meta name="theme-color" content="#0d8061" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -53,17 +56,23 @@ export function RegisterLayout({ children }) {
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
       </Head>
       {!auth ? (
-        <LoginScreen />
+        <>
+          <LanguageSelect standalone />
+          <LoginScreen />
+        </>
       ) : !auth.store_id ? (
-        <StoreManagement
-          stores={stores}
-          invitations={invitations}
-          onCreate={createStore}
-          onSelect={selectStore}
-          onDecide={decideInvitation}
-          onLogout={logout}
-          notice={notice}
-        />
+        <>
+          <LanguageSelect standalone />
+          <StoreManagement
+            stores={stores}
+            invitations={invitations}
+            onCreate={createStore}
+            onSelect={selectStore}
+            onDecide={decideInvitation}
+            onLogout={logout}
+            notice={notice}
+          />
+        </>
       ) : (
         <SidebarProvider
           className={tab === "pos" ? "app-shell pos-screen" : "app-shell"}
@@ -84,62 +93,65 @@ export function RegisterLayout({ children }) {
                 <div className="topbar-title">
                   <strong>
                     {pathname === "/products/new"
-                      ? "New product"
+                      ? t("new_product")
                       : productID
-                        ? "Edit product"
+                        ? t("edit_product")
                         : productTrash
-                          ? "Deleted products"
+                          ? t("deleted_products")
                           : {
-                              pos: "Point of sale",
-                              products: "Products",
-                              orders: "Order history",
-                              team: "Team",
-                              settings: "Store settings",
-                              stores: "Manage stores",
-                              finance: "Income and expenses",
-                              reports: "Reports",
-                              audit: "Audit log",
+                              pos: t("point_of_sale"),
+                              products: t("products"),
+                              orders: t("order_history"),
+                              team: t("team"),
+                              settings: t("store_settings"),
+                              stores: t("manage_stores"),
+                              finance: t("income_and_expenses"),
+                              reports: t("reports"),
+                              audit: t("audit_log"),
                             }[tab]}
                   </strong>
                   <small>{auth.store_name}</small>
                 </div>
               </div>
               <div className="topbar-right">
+                <LanguageSelect />
                 <span
                   className={online ? "signal online" : "signal"}
-                  aria-label={online ? "Connected" : "Offline"}
-                  title={online ? "Connected" : "Offline"}
+                  aria-label={online ? t("connected") : t("offline")}
+                  title={online ? t("connected") : t("offline")}
                 >
                   <span className="dot" />
                   <span className="signal-label">
-                    {online ? "Connected" : "Offline"}
+                    {online ? t("connected") : t("offline")}
                   </span>
                 </span>
                 <span
                   className="pending"
-                  aria-label={`${pending} pending sync`}
-                  title={`${pending} pending sync`}
+                  aria-label={t("pending_sync_count", { count: pending })}
+                  title={t("pending_sync_count", { count: pending })}
                 >
                   <CloudUpload size={16} />
-                  <span className="pending-label">{pending} pending</span>
+                  <span className="pending-label">
+                    {pending} {t("pending")}
+                  </span>
                   <span className="pending-count">{pending}</span>
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={logout}
-                  title="Sign out"
-                  aria-label="Sign out"
+                  title={t("sign_out")}
+                  aria-label={t("sign_out")}
                 >
                   <LogOut size={16} />
-                  <span className="sign-out-label">Sign out</span>
+                  <span className="sign-out-label">{t("sign_out")}</span>
                 </Button>
               </div>
             </header>
             {restricted ? (
               <section className="products-page">
-                <h1>Access restricted</h1>
-                <p>Your store role cannot open this page.</p>
+                <h1>{t("access_restricted")}</h1>
+                <p>{t("your_store_role_cannot_open_this_page")}</p>
               </section>
             ) : (
               children
@@ -148,8 +160,11 @@ export function RegisterLayout({ children }) {
           <PrintReceipt detail={printDetail} storeName={auth.store_name} />
           {notice && (
             <div className="toast" role="status">
-              {notice}
-              <button onClick={() => setNotice("")} aria-label="Close notice">
+              {translateMessage(notice)}
+              <button
+                onClick={() => setNotice("")}
+                aria-label={t("close_notice")}
+              >
                 <X size={16} />
               </button>
             </div>

@@ -32,3 +32,9 @@ await api(`/stores/${storeID}/products`, { method: "POST", body: product });
 ```
 
 The service worker saves route HTML and its scripts and styles after an online load. It also saves templates for dynamic product and report routes. Backend JSON requests go through `lib/api.js` and do not use the service worker cache. Pending sales and financial records stay in IndexedDB.
+
+## Languages
+
+The language menu at the top right switches between English and Bahasa Indonesia. The choice is saved on this device and works offline. UI text is in `public/locales/en.json` and `public/locales/id.json`. Keep matching keys and interpolation names in both files.
+
+Use `useI18n()` in components with translated text, and `t(key, options)` to render it. For notices or validation messages stored in state, save `message(key, options)` and render it with `translateMessage(value)`. This lets an existing message change language. Keep product names, custom categories, and stored role values unchanged.

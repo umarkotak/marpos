@@ -1,3 +1,4 @@
+import { t, message, useI18n } from "@/lib/i18n";
 import {
   createContext,
   useContext,
@@ -26,6 +27,7 @@ const RegisterContext = createContext(null);
 export const useRegister = () => useContext(RegisterContext);
 
 export function RegisterProvider({ children }) {
+  useI18n();
   const [db, setDB] = useState(null);
   const [auth, setAuth] = useState(null);
   const [stores, setStores] = useState([]);
@@ -115,7 +117,7 @@ export function RegisterProvider({ children }) {
           setStores(available);
           setAuth(noStore);
           await putMeta(localDB, "auth", noStore);
-          setNotice("You no longer have access to this store.");
+          setNotice(message("you_no_longer_have_access_to_this_store"));
         }
       }
     },
@@ -182,16 +184,18 @@ export function RegisterProvider({ children }) {
             if (error.status === 401) {
               await putMeta(localDB, "auth", null);
               setAuth(null);
-              setNotice("Sign in again to continue.");
+              setNotice(message("sign_in_again_to_continue"));
             }
           }
         } else if (cached) {
           await putMeta(localDB, "auth", null);
-          setNotice("Offline access expired. Sign in online again.");
+          setNotice(message("offline_access_expired_sign_in_online_again"));
         }
       } catch {
         setNotice(
-          "This browser cannot save sales. Use a browser with IndexedDB.",
+          message(
+            "this_browser_cannot_save_sales_use_a_browser_with_indexeddb",
+          ),
         );
       }
       try {
@@ -277,7 +281,7 @@ export function RegisterProvider({ children }) {
           setAuth(noStore);
           await putMeta(db, "auth", noStore);
           setProducts([]);
-          setNotice("Your access to this store has ended.");
+          setNotice(message("your_access_to_this_store_has_ended"));
         }
       } catch {}
     };
@@ -304,7 +308,7 @@ export function RegisterProvider({ children }) {
       await putMeta(db, "auth", saved);
       setStores(updatedStores);
       setAuth(saved);
-      setNotice("Store settings saved.");
+      setNotice(message("store_settings_saved"));
     } catch (error) {
       setNotice(error.message);
     }
@@ -316,17 +320,18 @@ export function RegisterProvider({ children }) {
       checkingOut ||
       syncing.current
     ) {
-      setNotice("Wait for current saves and sync to finish.");
+      setNotice(message("wait_for_current_saves_and_sync_to_finish"));
       return;
     }
-    const label =
-      kind === "products" ? "all products and orders" : "all orders";
+    const label = message(
+      kind === "products" ? "all_products_and_orders" : "all_orders",
+    );
     const confirmation = window.prompt(
-      `Permanently delete ${label} from ${auth.store_name}? Type the store name to confirm.`,
+      t("clear_store_confirmation", { records: label, store: auth.store_name }),
     );
     if (confirmation === null) return;
     if (confirmation !== auth.store_name) {
-      setNotice("The store name did not match.");
+      setNotice(message("the_store_name_did_not_match"));
       return;
     }
     clearingStore.current = true;
@@ -367,7 +372,7 @@ export function RegisterProvider({ children }) {
       setStores(available);
       await prepareStore(db, auth, store, available);
       setTab("pos");
-      setNotice("Store created.");
+      setNotice(message("store_created"));
       return true;
     } catch (error) {
       setNotice(error.message);
@@ -376,7 +381,7 @@ export function RegisterProvider({ children }) {
   }
   async function selectStore(store) {
     if (draftOrders.saving) {
-      setNotice("Wait for the draft to save before you switch stores.");
+      setNotice(message("wait_for_the_draft_to_save_before_you_switch_stores"));
       return;
     }
     await prepareStore(db, auth, store, stores);
@@ -395,7 +400,9 @@ export function RegisterProvider({ children }) {
       setStores(available);
       setInvitations(invites);
       setNotice(
-        accept ? "Store invitation accepted." : "Store invitation rejected.",
+        accept
+          ? message("store_invitation_accepted")
+          : message("store_invitation_rejected"),
       );
     } catch (error) {
       setNotice(error.message);

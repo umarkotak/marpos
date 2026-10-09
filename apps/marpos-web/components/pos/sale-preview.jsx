@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { X } from "lucide-react";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
@@ -9,6 +10,7 @@ export function SalePreview({
   total,
   checkout,
 }) {
+  useI18n();
   const { auth, draftOrders, checkingOut } = useRegister();
   const { cart, buyer, taxOn } = draftOrders;
   return (
@@ -24,20 +26,20 @@ export function SalePreview({
           className="modal sale-preview"
           role="dialog"
           aria-modal="true"
-          aria-label="Review sale"
+          aria-label={t("review_sale")}
           onKeyDown={(event) => {
             if (event.key === "Escape" && !checkingOut) setPreviewOpen(false);
           }}
         >
           <div className="modal-head">
             <div>
-              <small>FINAL CHECK</small>
-              <h2>Review sale</h2>
-              <p>Check the order before you complete the sale.</p>
+              <small>{t("final_check")}</small>
+              <h2>{t("review_sale")}</h2>
+              <p>{t("check_the_order_before_you_complete_the_sale")}</p>
             </div>
             <button
               className="icon-button"
-              aria-label="Close"
+              aria-label={t("close")}
               autoFocus
               disabled={checkingOut}
               onClick={() => setPreviewOpen(false)}
@@ -47,14 +49,17 @@ export function SalePreview({
           </div>
           <div className="modal-body">
             <div className="sale-preview-buyer">
-              <strong>Buyer</strong>
+              <strong>{t("buyer")}</strong>
               <span>
                 {[buyer.buyer_name, buyer.buyer_phone, buyer.buyer_email]
                   .filter(Boolean)
                   .join(" · ")}
               </span>
             </div>
-            <h3>Items ({cart.length})</h3>
+            <h3>
+              {t("items")}
+              {cart.length})
+            </h3>
             {cart.map((item) => (
               <div className="sale-preview-item" key={item.id}>
                 <div>
@@ -66,7 +71,9 @@ export function SalePreview({
                     <small key={addon.id}>
                       + {addon.option_name}
                       {addon.price_delta
-                        ? ` · ${money(addon.price_delta)} each`
+                        ? t("addon_unit_price", {
+                            price: money(addon.price_delta),
+                          })
                         : " · Free"}
                     </small>
                   ))}
@@ -77,17 +84,18 @@ export function SalePreview({
           </div>
           <div className="sale-preview-footer">
             <div>
-              <span>Subtotal</span>
+              <span>{t("subtotal")}</span>
               <strong>{money(subtotal)}</strong>
             </div>
             <div>
               <span>
-                Tax {taxOn ? `(${auth.tax_percentage}%)` : "(excluded)"}
+                {t("tax_label")}{" "}
+                {taxOn ? `(${auth.tax_percentage}%)` : "(excluded)"}
               </span>
               <strong>{money(tax)}</strong>
             </div>
             <div className="sale-preview-total">
-              <span>Total</span>
+              <span>{t("total_label")}</span>
               <strong>{money(total)}</strong>
             </div>
             <div className="modal-foot">
@@ -96,14 +104,14 @@ export function SalePreview({
                 disabled={checkingOut}
                 onClick={() => setPreviewOpen(false)}
               >
-                Back to order
+                {t("back_to_order")}
               </button>
               <button
                 className="button primary"
                 disabled={checkingOut}
                 onClick={checkout}
               >
-                {checkingOut ? "Saving sale…" : "Complete cash sale"}
+                {checkingOut ? t("saving_sale") : t("complete_cash_sale")}
               </button>
             </div>
           </div>

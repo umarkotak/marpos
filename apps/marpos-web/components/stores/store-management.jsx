@@ -1,3 +1,4 @@
+import { t, translateMessage, useI18n, roleLabel } from "@/lib/i18n";
 import { useState } from "react";
 
 export function StoreManagement({
@@ -9,6 +10,7 @@ export function StoreManagement({
   onLogout,
   notice,
 }) {
+  useI18n();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,14 +36,14 @@ export function StoreManagement({
             style={{ float: "right" }}
             onClick={onLogout}
           >
-            Sign out
+            {t("sign_out")}
           </button>
         )}
-        <h1>Manage stores</h1>
-        <p>Create a store or select one you can use.</p>
+        <h1>{t("manage_stores")}</h1>
+        <p>{t("create_a_store_or_select_one_you_can_use")}</p>
         {notice && (
           <p className="message" role="status">
-            {notice}
+            {translateMessage(notice)}
           </p>
         )}
         {stores.map((store) => (
@@ -52,57 +54,59 @@ export function StoreManagement({
           >
             <span>
               <strong>{store.name}</strong>
-              <small>{store.role}</small>
+              <small>{roleLabel(store.role)}</small>
             </span>
-            <span>Open →</span>
+            <span>{t("open")}</span>
           </button>
         ))}
         <form onSubmit={create} className="create-store">
           <label>
-            New store name
+            {t("new_store_name")}
             <input
               required
               maxLength={100}
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="My Store"
+              placeholder={t("my_store")}
             />
           </label>
           <label>
-            Slug
+            {t("slug")}
             <input
               required
               maxLength={100}
               pattern="[a-z0-9]+(-[a-z0-9]+)*"
               value={slug}
               onChange={(event) => setSlug(event.target.value)}
-              placeholder="my-store"
+              placeholder={t("store_slug_example")}
             />
           </label>
           <button className="button primary" disabled={busy}>
-            Create store
+            {t("create_store")}
           </button>
         </form>
         {invitations.length > 0 && (
           <div className="invitation-list">
-            <h2>Invitations</h2>
+            <h2>{t("invitations")}</h2>
             {invitations.map((invite) => (
               <div className="invitation-row" key={invite.id}>
                 <div>
                   <strong>{invite.store_name}</strong>
-                  <small>Role: {invite.role}</small>
+                  <small>
+                    {t("role")} {roleLabel(invite.role)}
+                  </small>
                 </div>
                 <button
                   className="button primary"
                   onClick={() => onDecide(invite.id, true)}
                 >
-                  Accept
+                  {t("accept")}
                 </button>
                 <button
                   className="button secondary"
                   onClick={() => onDecide(invite.id, false)}
                 >
-                  Reject
+                  {t("reject")}
                 </button>
               </div>
             ))}

@@ -1,20 +1,22 @@
+import { t, useI18n, formatLocale } from "@/lib/i18n";
 import { money } from "@/lib/reports";
 const labels = {
-  "sale.created": "Order created",
-  "sale.corrected": "Order updated",
-  "sale.deleted": "Order deleted",
-  "sale.restored": "Order restored",
+  "sale.created": "order_created",
+  "sale.corrected": "order_updated",
+  "sale.deleted": "order_deleted",
+  "sale.restored": "order_restored",
 };
 const timestamp = (value) =>
-  new Date(value).toLocaleString("en-GB", { timeZone: "Asia/Jakarta" });
+  new Date(value).toLocaleString(formatLocale(), { timeZone: "Asia/Jakarta" });
 function Snapshot({ label, sale }) {
+  useI18n();
   return (
     <div>
       <strong>{label}</strong>
       <p>
         {[sale.buyer_name, sale.buyer_phone, sale.buyer_email]
           .filter(Boolean)
-          .join(" · ") || "No buyer details"}
+          .join(" · ") || t("no_buyer_details")}
       </p>
       {sale.items?.map((item) => (
         <p key={item.id}>
@@ -26,26 +28,36 @@ function Snapshot({ label, sale }) {
           ))}
         </p>
       ))}
-      <p>Tax: {sale.tax_applied ? sale.tax_percentage + "%" : "Excluded"}</p>
-      <p>Total: {money(sale.grand_total)}</p>
+      <p>
+        {t("tax")}{" "}
+        {sale.tax_applied ? sale.tax_percentage + "%" : t("excluded")}
+      </p>
+      <p>
+        {t("total")} {money(sale.grand_total)}
+      </p>
     </div>
   );
 }
 export function AuditHistory({ entries, local = false }) {
+  useI18n();
   return (
     <section className="correction-history">
-      <h3>Order history log</h3>
+      <h3>{t("order_history_log")}</h3>
       {!entries.length && (
         <p>
           {local
-            ? "This sale is waiting for sync. Its server audit record will appear after sync."
-            : "No audit events were recorded for this older order."}
+            ? t(
+                "this_sale_is_waiting_for_sync_its_server_audit_record_will_appear_after_sync",
+              )
+            : t("no_audit_events_were_recorded_for_this_older_order")}
         </p>
       )}
       {entries.map((entry) => (
         <div className="audit-event" key={entry.id}>
           <div>
-            <strong>{labels[entry.action] || entry.action}</strong>
+            <strong>
+              {labels[entry.action] ? t(labels[entry.action]) : entry.action}
+            </strong>
             <small>{timestamp(entry.created_at)} WIB</small>
           </div>
           <p>
@@ -53,23 +65,27 @@ export function AuditHistory({ entries, local = false }) {
           </p>
           {entry.metadata.reason && <p>{entry.metadata.reason}</p>}
           {entry.metadata.completed_at && (
-            <p>Sale completed: {timestamp(entry.metadata.completed_at)} WIB</p>
+            <p>
+              {t("sale_completed")} {timestamp(entry.metadata.completed_at)} WIB
+            </p>
           )}
           {entry.metadata.before && entry.metadata.after && (
             <details>
               <summary>
-                View changes · Revision {entry.metadata.revision}
+                {t("view_changes_revision")} {entry.metadata.revision}
               </summary>
-              <p>Cash adjustment: {money(entry.metadata.cash_delta)}</p>
+              <p>
+                {t("cash_adjustment")} {money(entry.metadata.cash_delta)}
+              </p>
               <div className="correction-values">
                 <Snapshot
-                  label="Before"
+                  label={t("before")}
                   sale={{
                     ...entry.metadata.before.sale,
                     items: entry.metadata.before.items,
                   }}
                 />
-                <Snapshot label="After" sale={entry.metadata.after} />
+                <Snapshot label={t("after")} sale={entry.metadata.after} />
               </div>
             </details>
           )}

@@ -34,6 +34,6 @@
     <string>/Users/umar/umar/personal_project/marpos/apps/api/marpos-api.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/umar/umar/personal_project/marpos/apps/api/marpos-api.error.log</string>
+    <string>/Users/umar/umar/personal_project/marpos/apps/api/marpos-api.log</string>
 </dict>
 </plist>

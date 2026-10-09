@@ -1,8 +1,10 @@
+import { t, message, translateMessage, useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import { BuyerFields, buyerError, blankBuyer } from "@/components/buyer-fields";
 import { money } from "@/lib/reports";
 import { IdrInput } from "@/components/idr-input";
 export function OrderEditor({ detail, products, onSave, onCancel }) {
+  useI18n();
   const [buyer, setBuyer] = useState({
     ...blankBuyer(),
     ...Object.fromEntries(
@@ -55,7 +57,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
     if (!product) return;
     for (const group of product.addon_groups) {
       if (group.required && !choices[group.id]?.length) {
-        setError(`Choose an option for ${group.name}.`);
+        setError(message("choose_group_option", { group: group.name }));
         return;
       }
     }
@@ -105,9 +107,9 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
   }
   async function submit(event) {
     event.preventDefault();
-    const message = buyerError(buyer);
-    if (message) {
-      setError(message);
+    const buyerMessage = buyerError(buyer);
+    if (buyerMessage) {
+      setError(buyerMessage);
       return;
     }
     if (
@@ -125,11 +127,11 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
           ),
       )
     ) {
-      setError("Check item quantities and prices.");
+      setError(message("check_item_quantities_and_prices"));
       return;
     }
     if (delta && !confirmed) {
-      setError("Confirm the cash received or returned.");
+      setError(message("confirm_the_cash_received_or_returned"));
       return;
     }
     setBusy(true);
@@ -155,10 +157,11 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
   return (
     <form className="order-edit-form" onSubmit={submit}>
       <fieldset disabled={busy}>
-        <legend>Edit order</legend>
+        <legend>{t("edit_order")}</legend>
         <p>
-          Changes keep the original receipt reference and create a correction
-          record.
+          {t(
+            "changes_keep_the_original_receipt_reference_and_create_a_correction_record",
+          )}
         </p>
         <BuyerFields buyer={buyer} onChange={setBuyer} />
         {items.map((item) => (
@@ -166,7 +169,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
             <strong>{item.product_name}</strong>
             <div className="form-grid">
               <label>
-                Quantity
+                {t("quantity")}
                 <input
                   type="number"
                   min="1"
@@ -178,7 +181,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
                 />
               </label>
               <label>
-                Unit price (IDR)
+                {t("unit_price_idr")}
                 <IdrInput
                   required
                   value={item.unit_price}
@@ -188,7 +191,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
             </div>
             {item.addons.map((addon, index) => (
               <label key={addon.id || index}>
-                {addon.group_name}: {addon.option_name} price (IDR)
+                {addon.group_name}: {addon.option_name} {t("price_idr")}
                 <IdrInput
                   required
                   value={addon.price_delta}
@@ -210,13 +213,13 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
                 setConfirmed(false);
               }}
             >
-              Remove item
+              {t("remove_item")}
             </button>
           </div>
         ))}
         <div className="order-add-product">
           <label>
-            Add product
+            {t("add_product")}
             <select
               value={productID}
               onChange={(e) => {
@@ -224,7 +227,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
                 setChoices({});
               }}
             >
-              <option value="">Choose a product</option>
+              <option value="">{t("choose_a_product")}</option>
               {products.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name} · {money(row.price)}
@@ -236,7 +239,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
             <fieldset key={group.id}>
               <legend>
                 {group.name}
-                {group.required ? " (required)" : ""}
+                {group.required ? t("required_suffix") : ""}
               </legend>
               {group.options.map((option) => (
                 <label className="tax-switch" key={option.id}>
@@ -273,11 +276,11 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
             disabled={!product}
             onClick={add}
           >
-            Add item
+            {t("add_item")}
           </button>
         </div>
         <label className="tax-switch">
-          <span>Include tax</span>
+          <span>{t("include_tax")}</span>
           <input
             type="checkbox"
             checked={taxOn}
@@ -288,7 +291,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
           />
         </label>
         <label>
-          Tax percentage
+          {t("tax_percentage")}
           <input
             type="number"
             min="0"
@@ -303,7 +306,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
           />
         </label>
         <div className="receipt-line grand">
-          <span>Corrected total</span>
+          <span>{t("corrected_total")}</span>
           <strong>{money(total)}</strong>
         </div>
         {delta !== 0 && (
@@ -314,13 +317,17 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
               onChange={(e) => setConfirmed(e.target.checked)}
             />
             <span>
-              I confirm {money(Math.abs(delta))} cash was{" "}
-              {delta > 0 ? "received from" : "returned to"} the buyer.
+              {t(
+                delta > 0
+                  ? "cash_confirmation_received"
+                  : "cash_confirmation_returned",
+                { amount: money(Math.abs(delta)) },
+              )}
             </span>
           </label>
         )}
         <label>
-          Correction reason
+          {t("correction_reason")}
           <textarea
             required
             maxLength={1000}
@@ -330,15 +337,15 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
         </label>
         {error && (
           <p className="message" role="alert">
-            {error}
+            {translateMessage(error)}
           </p>
         )}
         <div className="form-actions">
           <button className="button secondary" type="button" onClick={onCancel}>
-            Cancel
+            {t("cancel")}
           </button>
           <button className="button primary" disabled={!lines.length}>
-            {busy ? "Saving…" : "Save correction"}
+            {busy ? t("saving") : t("save_correction")}
           </button>
         </div>
       </fieldset>

@@ -1,3 +1,4 @@
+import { t, message, useI18n, categoryLabel } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { ChevronDown, Package, Plus, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -36,6 +37,7 @@ export function ProductForm({
   uploading,
   setUploading,
 }) {
+  useI18n();
   const [form, setForm] = useState(
     product
       ? {
@@ -81,7 +83,9 @@ export function ProductForm({
       [...category].length > 100 ||
       !/^[\p{L}\p{N} ]+$/u.test(category)
     ) {
-      onNotice("Use 1 to 100 letters, numbers, or spaces for the category.");
+      onNotice(
+        message("use_1_to_100_letters_numbers_or_spaces_for_the_category"),
+      );
       return;
     }
     setCategoryOptions((old) => [...new Set([...old, category])]);
@@ -93,14 +97,14 @@ export function ProductForm({
     const files = Array.from(event.target.files || []);
     event.target.value = "";
     if (form.image_urls.length + files.length > 10) {
-      onNotice("Use at most 10 images per product.");
+      onNotice(message("use_at_most_10_images_per_product"));
       return;
     }
     setUploading(true);
     try {
       for (const file of files) {
         if (file.size > 8 * 1024 * 1024) {
-          onNotice("Choose an image smaller than 8 MB.");
+          onNotice(message("choose_an_image_smaller_than_8_mb"));
           continue;
         }
         const body = new FormData();
@@ -174,12 +178,14 @@ export function ProductForm({
         </span>
         <div>
           <small>
-            {product?.id ? "CATALOG / EDIT PRODUCT" : "CATALOG / NEW PRODUCT"}
+            {product?.id ? t("catalog_edit_product") : t("catalog_new_product")}
           </small>
           <h2>
-            {product?.id ? form.name || "Edit product" : "Create a product"}
+            {product?.id
+              ? form.name || t("edit_product")
+              : t("create_a_product")}
           </h2>
-          <p>Set the details customers and cashiers see at checkout.</p>
+          <p>{t("set_the_details_customers_and_cashiers_see_at_checkout")}</p>
         </div>
       </header>
       <section
@@ -187,18 +193,18 @@ export function ProductForm({
         aria-labelledby="product-details-heading"
       >
         <div className="settings-section-copy">
-          <span>01 / DETAILS</span>
-          <h3 id="product-details-heading">Product details</h3>
-          <p>Add a clear name, SKU, category, and price.</p>
+          <span>{t("01_details")}</span>
+          <h3 id="product-details-heading">{t("product_details")}</h3>
+          <p>{t("add_a_clear_name_sku_category_and_price")}</p>
         </div>
         <div className="settings-fields product-fields">
           <label>
-            Product name
+            {t("product_name")}
             <input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Iced coffee"
+              placeholder={t("iced_coffee")}
             />
           </label>
           <label>
@@ -207,22 +213,24 @@ export function ProductForm({
               required
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
-              placeholder="COFFEE-01"
+              placeholder={t("coffee_01")}
             />
           </label>
           <div className="category-picker">
-            <span>Category</span>
+            <span>{t("category")}</span>
             <DropdownMenu open={categoryOpen} onOpenChange={setCategoryOpen}>
               <DropdownMenuTrigger
                 render={
                   <button
                     type="button"
                     className="category-trigger"
-                    aria-label={`Category: ${form.category}`}
+                    aria-label={t("selected_category", {
+                      category: categoryLabel(form.category),
+                    })}
                   />
                 }
               >
-                {form.category}
+                {categoryLabel(form.category)}
                 <ChevronDown size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="category-menu">
@@ -233,17 +241,17 @@ export function ProductForm({
                     ),
                   ].map((category) => (
                     <DropdownMenuItem
-                      key={category}
+                      key={categoryLabel(category)}
                       onClick={() => setForm((old) => ({ ...old, category }))}
                     >
-                      {category}
+                      {categoryLabel(category)}
                     </DropdownMenuItem>
                   ))}
                 </div>
                 <DropdownMenuSeparator />
                 <div className="category-add">
                   <input
-                    aria-label="New category"
+                    aria-label={t("new_category")}
                     maxLength={100}
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
@@ -254,12 +262,12 @@ export function ProductForm({
                         useCustomCategory();
                       }
                     }}
-                    placeholder="New category"
+                    placeholder={t("new_category")}
                   />
                   <button
                     type="button"
                     className="button secondary"
-                    aria-label="Use new category"
+                    aria-label={t("use_new_category")}
                     disabled={!customCategory.trim()}
                     onClick={useCustomCategory}
                   >
@@ -270,7 +278,7 @@ export function ProductForm({
             </DropdownMenu>
           </div>
           <label>
-            Price (IDR)
+            {t("price_idr_label")}
             <IdrInput
               required
               value={form.price}
@@ -284,13 +292,15 @@ export function ProductForm({
         aria-labelledby="product-images-heading"
       >
         <div className="settings-section-copy">
-          <span>02 / IMAGES</span>
-          <h3 id="product-images-heading">Product images</h3>
-          <p>Add up to 10 images. The first image appears in the catalog.</p>
+          <span>{t("02_images")}</span>
+          <h3 id="product-images-heading">{t("product_images")}</h3>
+          <p>
+            {t("add_up_to_10_images_the_first_image_appears_in_the_catalog")}
+          </p>
         </div>
         <div className="product-section-content">
           <label className="button secondary image-upload">
-            {uploading ? "Uploading…" : "Add images"}
+            {uploading ? t("uploading") : t("add_images")}
             <input
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
@@ -305,12 +315,15 @@ export function ProductForm({
                 <div key={url}>
                   <img
                     src={url}
-                    alt={`${form.name || "Product"} image ${index + 1}`}
+                    alt={t("product_image", {
+                      product: form.name || t("product"),
+                      number: index + 1,
+                    })}
                   />
                   <button
                     type="button"
                     className="icon-button danger"
-                    aria-label={`Remove image ${index + 1}`}
+                    aria-label={t("remove_image", { number: index + 1 })}
                     onClick={() =>
                       setForm((old) => ({
                         ...old,
@@ -322,7 +335,7 @@ export function ProductForm({
                   >
                     <X size={16} />
                   </button>
-                  {index === 0 && <small>Catalog image</small>}
+                  {index === 0 && <small>{t("catalog_image")}</small>}
                 </div>
               ))}
             </div>
@@ -334,9 +347,9 @@ export function ProductForm({
         aria-labelledby="product-cost-heading"
       >
         <div className="settings-section-copy">
-          <span>03 / COSTS</span>
-          <h3 id="product-cost-heading">Production cost</h3>
-          <p>List materials, packaging, and other costs for one unit.</p>
+          <span>{t("03_costs")}</span>
+          <h3 id="product-cost-heading">{t("production_cost")}</h3>
+          <p>{t("list_materials_packaging_and_other_costs_for_one_unit")}</p>
         </div>
         <div className="product-section-content">
           <button
@@ -352,12 +365,12 @@ export function ProductForm({
               })
             }
           >
-            <Plus size={16} /> Add cost
+            <Plus size={16} /> {t("add_cost")}
           </button>
           {form.cost_breakdown.map((cost, i) => (
             <div className="option-fields" key={i}>
               <label>
-                Cost item
+                {t("cost_item")}
                 <input
                   required
                   maxLength={100}
@@ -373,7 +386,7 @@ export function ProductForm({
                 />
               </label>
               <label>
-                Cost (IDR)
+                {t("cost_idr")}
                 <IdrInput
                   required
                   value={cost.amount}
@@ -390,7 +403,7 @@ export function ProductForm({
               <button
                 type="button"
                 className="icon-button danger"
-                aria-label="Remove cost"
+                aria-label={t("remove_cost")}
                 onClick={() =>
                   setForm({
                     ...form,
@@ -405,7 +418,7 @@ export function ProductForm({
             </div>
           ))}
           <p className="product-cost-total">
-            Total unit cost{" "}
+            {t("total_unit_cost")}{" "}
             <strong>
               {money(
                 form.cost_breakdown.reduce(
@@ -422,9 +435,9 @@ export function ProductForm({
         aria-labelledby="product-addons-heading"
       >
         <div className="settings-section-copy">
-          <span>04 / ADD-ONS</span>
-          <h3 id="product-addons-heading">Add-on groups</h3>
-          <p>Offer one choice or several choices with the product.</p>
+          <span>{t("04_add_ons")}</span>
+          <h3 id="product-addons-heading">{t("add_on_groups")}</h3>
+          <p>{t("offer_one_choice_or_several_choices_with_the_product")}</p>
         </div>
         <div className="product-section-content">
           <button
@@ -437,30 +450,30 @@ export function ProductForm({
               })
             }
           >
-            <Plus size={16} /> Add group
+            <Plus size={16} /> {t("add_group")}
           </button>
           {form.addon_groups.map((group, i) => (
             <div className="addon-editor" key={i}>
               <div className="group-fields">
                 <label>
-                  Group name
+                  {t("group_name")}
                   <input
                     required
                     value={group.name}
                     onChange={(e) => groupChange(i, { name: e.target.value })}
-                    placeholder="Milk"
+                    placeholder={t("milk")}
                   />
                 </label>
                 <label>
-                  Choice type
+                  {t("choice_type")}
                   <select
                     value={group.selection_mode}
                     onChange={(e) =>
                       groupChange(i, { selection_mode: e.target.value })
                     }
                   >
-                    <option value="single">Choose one</option>
-                    <option value="multiple">Choose several</option>
+                    <option value="single">{t("choose_one")}</option>
+                    <option value="multiple">{t("choose_several")}</option>
                   </select>
                 </label>
                 <label className="check-label">
@@ -471,12 +484,12 @@ export function ProductForm({
                       groupChange(i, { required: e.target.checked })
                     }
                   />{" "}
-                  Required
+                  {t("required")}
                 </label>
                 <button
                   type="button"
                   className="icon-button danger"
-                  aria-label="Remove group"
+                  aria-label={t("remove_group")}
                   onClick={() =>
                     setForm({
                       ...form,
@@ -490,18 +503,18 @@ export function ProductForm({
               {group.options.map((option, j) => (
                 <div className="option-fields addon-option-fields" key={j}>
                   <label>
-                    Option
+                    {t("option")}
                     <input
                       required
                       value={option.name}
                       onChange={(e) =>
                         optionChange(i, j, { name: e.target.value })
                       }
-                      placeholder="Oat milk"
+                      placeholder={t("oat_milk")}
                     />
                   </label>
                   <label>
-                    Price increase
+                    {t("price_increase")}
                     <IdrInput
                       required
                       value={option.price_delta}
@@ -511,7 +524,7 @@ export function ProductForm({
                     />
                   </label>
                   <label>
-                    Cost increase (IDR)
+                    {t("cost_increase_idr")}
                     <IdrInput
                       required
                       value={option.cost_delta ?? 0}
@@ -524,7 +537,7 @@ export function ProductForm({
                     type="button"
                     className="icon-button danger"
                     disabled={group.options.length === 1}
-                    aria-label="Remove option"
+                    aria-label={t("remove_option")}
                     onClick={() =>
                       groupChange(i, {
                         options: group.options.filter((_, k) => k !== j),
@@ -547,16 +560,20 @@ export function ProductForm({
                   })
                 }
               >
-                <Plus size={15} /> Add option
+                <Plus size={15} /> {t("add_option")}
               </button>
             </div>
           ))}
         </div>
       </section>
       <footer className="settings-actions">
-        <span>Changes apply to this store.</span>
+        <span>{t("changes_apply_to_this_store")}</span>
         <button className="button primary" disabled={busy || uploading}>
-          {busy ? "Saving..." : product?.id ? "Save product" : "Create product"}
+          {busy
+            ? t("saving_label")
+            : product?.id
+              ? t("save_product")
+              : t("create_product")}
         </button>
       </footer>
     </form>

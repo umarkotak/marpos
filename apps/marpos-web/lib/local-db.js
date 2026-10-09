@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 const databaseName = "marpos-pos";
 
 function requestResult(request) {
@@ -26,7 +27,7 @@ export function openLocalDB() {
       resolve(request.result);
     };
     request.onblocked = () =>
-      reject(new Error("Close other Marpos tabs, then reload."));
+      reject(new Error(t("close_other_marpos_tabs_then_reload")));
     request.onerror = () => reject(request.error);
   });
 }

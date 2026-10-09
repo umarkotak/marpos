@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { X } from "lucide-react";
 import { BuyerFields } from "@/components/buyer-fields";
 export function BuyerDialog({
@@ -7,6 +8,7 @@ export function BuyerDialog({
   setBuyerDraft,
   saveBuyer,
 }) {
+  useI18n();
   return (
     buyerOpen && (
       <div
@@ -19,7 +21,7 @@ export function BuyerDialog({
           className="modal buyer-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Buyer details"
+          aria-label={t("buyer_details")}
           onSubmit={saveBuyer}
           onKeyDown={(event) => {
             if (event.key === "Escape") setBuyerOpen(false);
@@ -27,13 +29,13 @@ export function BuyerDialog({
         >
           <div className="modal-head">
             <div>
-              <small>CURRENT ORDER</small>
-              <h2>Buyer details</h2>
+              <small>{t("current_order")}</small>
+              <h2>{t("buyer_details")}</h2>
             </div>
             <button
               type="button"
               className="icon-button"
-              aria-label="Close"
+              aria-label={t("close")}
               onClick={() => setBuyerOpen(false)}
             >
               <X size={20} />
@@ -48,9 +50,9 @@ export function BuyerDialog({
               className="button secondary"
               onClick={() => setBuyerOpen(false)}
             >
-              Cancel
+              {t("cancel")}
             </button>
-            <button className="button primary">Save buyer</button>
+            <button className="button primary">{t("save_buyer")}</button>
           </div>
         </form>
       </div>

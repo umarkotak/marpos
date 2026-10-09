@@ -1,8 +1,10 @@
+import { t, message, useI18n, roleLabel } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 
 export function TeamPage({ auth, onNotice }) {
+  useI18n();
   const [members, setMembers] = useState([]);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("cashier");
@@ -24,7 +26,7 @@ export function TeamPage({ auth, onNotice }) {
         body: { email, role },
       });
       setEmail("");
-      onNotice("Invitation is ready in the user's app.");
+      onNotice(message("invitation_is_ready_in_the_user_s_app"));
     } catch (error) {
       onNotice(error.message);
     } finally {
@@ -43,7 +45,8 @@ export function TeamPage({ auth, onNotice }) {
     }
   }
   async function remove(member) {
-    if (!confirm(`Remove ${member.name} from this store?`)) return;
+    if (!confirm(t("remove_member_confirmation", { member: member.name })))
+      return;
     try {
       await api(`/stores/${auth.store_id}/members/${member.user_id}`, {
         method: "DELETE",
@@ -56,14 +59,14 @@ export function TeamPage({ auth, onNotice }) {
   return (
     <section className="products-page">
       <div className="page-heading">
-        <small>STORE</small>
-        <h1>Team</h1>
-        <p>Each user has one role in this store.</p>
+        <small>{t("store_label")}</small>
+        <h1>{t("team")}</h1>
+        <p>{t("each_user_has_one_role_in_this_store")}</p>
       </div>
       {canManage && (
         <form className="invite-form" onSubmit={invite}>
           <label>
-            Email
+            {t("email")}
             <input
               required
               type="email"
@@ -72,24 +75,26 @@ export function TeamPage({ auth, onNotice }) {
             />
           </label>
           <label>
-            Role
+            {t("role_label")}
             <select
               value={role}
               onChange={(event) => setRole(event.target.value)}
             >
-              <option value="cashier">Cashier</option>
-              <option value="manager">Manager</option>
-              {auth.role === "owner" && <option value="admin">Admin</option>}
+              <option value="cashier">{t("cashier")}</option>
+              <option value="manager">{t("manager")}</option>
+              {auth.role === "owner" && (
+                <option value="admin">{t("admin")}</option>
+              )}
             </select>
           </label>
           <button className="button primary" disabled={busy}>
-            Send invitation
+            {t("send_invitation")}
           </button>
         </form>
       )}
       <div className="table-card">
         <div className="table-head">
-          <strong>{members.length} members</strong>
+          <strong>{t("member_count", { count: members.length })}</strong>
         </div>
         {members.map((member) => (
           <div className="team-row" key={member.user_id}>
@@ -103,25 +108,25 @@ export function TeamPage({ auth, onNotice }) {
             (auth.role === "owner" || member.role !== "admin") ? (
               <>
                 <select
-                  aria-label={`Role for ${member.name}`}
-                  value={member.role}
+                  aria-label={t("member_role", { member: member.name })}
+                  value={roleLabel(member.role)}
                   onChange={(event) => change(member, event.target.value)}
                 >
-                  <option value="cashier">Cashier</option>
-                  <option value="manager">Manager</option>
+                  <option value="cashier">{t("cashier")}</option>
+                  <option value="manager">{t("manager")}</option>
                   {auth.role === "owner" && (
-                    <option value="admin">Admin</option>
+                    <option value="admin">{t("admin")}</option>
                   )}
                 </select>
                 <button
                   className="button secondary"
                   onClick={() => remove(member)}
                 >
-                  Remove
+                  {t("remove")}
                 </button>
               </>
             ) : (
-              <span>{member.role}</span>
+              <span>{roleLabel(member.role)}</span>
             )}
           </div>
         ))}

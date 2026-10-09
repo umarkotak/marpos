@@ -542,3 +542,7 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .audit-event small { display:block; color:#6c8076; }
 .audit-event p { margin:8px 0; font-size:12px; }
 .audit-event summary { cursor:pointer; font-size:13px; font-weight:600; }
+
+.language-select { flex-shrink: 0; }
+.language-select.standalone { position: fixed; top: 1rem; right: 1rem; z-index: 40; }
+@media print { .language-select { display: none; } }

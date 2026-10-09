@@ -1,3 +1,4 @@
+import { t, message, useI18n, categoryLabel } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -6,6 +7,7 @@ import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
 
 export function ProductList() {
+  useI18n();
   const { auth, db, products, setNotice, loadCatalog } = useRegister();
   const { pathname } = useLocation();
   const [productSearch, setProductSearch] = useState("");
@@ -26,7 +28,7 @@ export function ProductList() {
       (product) =>
         (selectedCategory === "all" ||
           (product.category || "lainnya") === selectedCategory) &&
-        `${product.name} ${product.sku} ${product.category || "lainnya"}`
+        `${product.name} ${product.sku} ${product.category || "lainnya"} ${categoryLabel(product.category || "lainnya")}`
           .toLocaleLowerCase()
           .includes(productQuery),
     )
@@ -52,7 +54,11 @@ export function ProductList() {
     if (productTrash && auth?.store_id) loadDeletedProducts();
   }, [productTrash, auth?.store_id]);
   async function changeProduct(product, restore) {
-    if (!restore && !confirm(`Delete ${product.name}?`)) return;
+    if (
+      !restore &&
+      !confirm(t("delete_product_confirmation", { product: product.name }))
+    )
+      return;
     try {
       await api(
         `/stores/${auth.store_id}/products/${product.id}${restore ? "/restore" : ""}`,
@@ -60,7 +66,9 @@ export function ProductList() {
       );
       await loadCatalog(db, auth);
       if (productTrash) await loadDeletedProducts();
-      setNotice(restore ? "Product restored." : "Product deleted.");
+      setNotice(
+        restore ? message("product_restored") : message("product_deleted"),
+      );
     } catch (error) {
       setNotice(error.message);
     }
@@ -69,7 +77,7 @@ export function ProductList() {
   if (pathname === "/products/deleted" && !auth.is_superadmin)
     return (
       <section className="products-page">
-        <h1>Access restricted</h1>
+        <h1>{t("access_restricted")}</h1>
       </section>
     );
   return (
@@ -79,17 +87,17 @@ export function ProductList() {
           className="link-button report-back"
           onClick={() => navigate(pagePaths.products, true)}
         >
-          ← Back to products
+          {t("back_to_products")}
         </button>
       )}
       <div className="page-heading heading-row">
         <div>
-          <small>CATALOG</small>
-          <h1>{productTrash ? "Deleted products" : "Products"}</h1>
+          <small>{t("catalog")}</small>
+          <h1>{productTrash ? t("deleted_products") : t("products")}</h1>
           <p>
             {productTrash
-              ? "Restore products for this store."
-              : "Set prices and add-on choices for this store."}
+              ? t("restore_products_for_this_store")
+              : t("set_prices_and_add_on_choices_for_this_store")}
           </p>
         </div>
         {!productTrash && (auth.role !== "cashier" || auth.is_superadmin) && (
@@ -97,43 +105,43 @@ export function ProductList() {
             className="button primary"
             onClick={() => navigate("/products/new")}
           >
-            <Plus size={18} /> New product
+            <Plus size={18} /> {t("new_product")}
           </button>
         )}
       </div>
       <div className="product-list-controls">
         <label>
-          Search products
+          {t("search_products")}
           <input
             type="search"
             value={productSearch}
             onChange={(event) => setProductSearch(event.target.value)}
-            placeholder="Name, SKU, or category"
+            placeholder={t("name_sku_or_category")}
           />
         </label>
         <label>
-          Category
+          {t("category")}
           <select
             value={selectedCategory}
             onChange={(event) => setProductCategory(event.target.value)}
           >
-            <option value="all">All categories</option>
+            <option value="all">{t("all_categories")}</option>
             {listCategories.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {categoryLabel(category)}
               </option>
             ))}
           </select>
         </label>
         <label>
-          Sort by
+          {t("sort_by")}
           <select
             value={productSort}
             onChange={(event) => setProductSort(event.target.value)}
           >
-            <option value="name">Name A–Z</option>
-            <option value="price-asc">Price: low to high</option>
-            <option value="price-desc">Price: high to low</option>
+            <option value="name">{t("name_a_z")}</option>
+            <option value="price-asc">{t("price_low_to_high")}</option>
+            <option value="price-desc">{t("price_high_to_low")}</option>
           </select>
         </label>
         {hasProductFilters && (
@@ -146,22 +154,25 @@ export function ProductList() {
               setProductSort("name");
             }}
           >
-            Clear filters
+            {t("clear_filters")}
           </button>
         )}
       </div>
       <div className="table-card product-list">
         <div className="table-head">
           <strong>
-            {visibleProducts.length} of {listedProducts.length} products
+            {t("product_results", {
+              shown: visibleProducts.length,
+              total: listedProducts.length,
+            })}
           </strong>
-          <span>Prices in IDR</span>
+          <span>{t("prices_in_idr")}</span>
           {auth.is_superadmin && !productTrash && (
             <button
               className="button secondary"
               onClick={() => navigate("/products/deleted")}
             >
-              Deleted products
+              {t("deleted_products")}
             </button>
           )}
         </div>
@@ -181,9 +192,11 @@ export function ProductList() {
             <div>
               <strong>{product.name}</strong>
               <small>
-                {product.category || "lainnya"} · {product.sku} ·{" "}
-                {product.addon_groups.length} add-on groups ·{" "}
-                {product.image_urls?.length || 0} images
+                {categoryLabel(product.category || "lainnya")} · {product.sku} ·{" "}
+                {t("product_assets", {
+                  groups: product.addon_groups.length,
+                  images: product.image_urls?.length || 0,
+                })}
               </small>
             </div>
             <strong>{money(product.price)}</strong>
@@ -193,7 +206,7 @@ export function ProductList() {
                   className="button secondary"
                   onClick={() => changeProduct(product, true)}
                 >
-                  Restore
+                  {t("restore")}
                 </button>
               )
             ) : (
@@ -203,7 +216,7 @@ export function ProductList() {
                   auth.is_superadmin) && (
                   <button
                     className="icon-button danger"
-                    aria-label={`Delete ${product.name}`}
+                    aria-label={t("delete_product", { product: product.name })}
                     onClick={() => changeProduct(product, false)}
                   >
                     <Trash2 size={17} />
@@ -212,7 +225,9 @@ export function ProductList() {
                 {(auth.role !== "cashier" || auth.is_superadmin) && (
                   <button
                     className="icon-button"
-                    aria-label={`Edit ${product.name}`}
+                    aria-label={t("edit_named_product", {
+                      product: product.name,
+                    })}
                     onClick={() => navigate(`/products/${product.id}/edit`)}
                   >
                     <Pencil size={17} />
@@ -227,15 +242,15 @@ export function ProductList() {
             <Package size={30} />
             <strong>
               {listedProducts.length
-                ? "No matching products"
-                : "No products found"}
+                ? t("no_matching_products")
+                : t("no_products_found")}
             </strong>
             <p>
               {listedProducts.length
-                ? "Try another search or category."
+                ? t("try_another_search_or_category")
                 : productTrash
-                  ? "No deleted products in this store."
-                  : "Create a product to add it to this store."}
+                  ? t("no_deleted_products_in_this_store")
+                  : t("create_a_product_to_add_it_to_this_store")}
             </p>
             {listedProducts.length > 0 && hasProductFilters && (
               <button
@@ -247,7 +262,7 @@ export function ProductList() {
                   setProductSort("name");
                 }}
               >
-                Clear filters
+                {t("clear_filters")}
               </button>
             )}
           </div>

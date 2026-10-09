@@ -1,3 +1,4 @@
+import { message } from "@/lib/i18n";
 import { useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import {
@@ -67,23 +68,26 @@ export function useSyncQueue({
           failed++;
         }
       }
-      if (failed)
-        setNotice(
-          `${failed} records could not sync. Check store access and record data. Records stay on this device.`,
-        );
+      if (failed) setNotice(message("sync_failed_count", { count: failed }));
       else if (entries.some((entry) => entry.created_by !== session.user_id))
         setNotice(
-          "Some pending financial records need the user who created them to sign in.",
+          message(
+            "some_pending_financial_records_need_the_user_who_created_them_to_sign_in",
+          ),
         );
       setOnline(true);
     } catch (error) {
       setOnline(false);
       if (error.status && error.status !== 401)
-        setNotice(`Sync failed: ${error.message} Records stay on this device.`);
+        setNotice(
+          message("sync_failed", {
+            error: message("api_error", { detail: error.message }),
+          }),
+        );
       if (error.status === 401) {
         await putMeta(localDB, "auth", null);
         setAuth(null);
-        setNotice("Sign in again to sync pending sales.");
+        setNotice(message("sign_in_again_to_sync_pending_sales"));
       }
     } finally {
       syncing.current = false;

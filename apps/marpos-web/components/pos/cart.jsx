@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import { Minus, Pencil, Plus, Printer, ShoppingCart, X } from "lucide-react";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
@@ -11,28 +12,29 @@ export function Cart({
   setBuyerOpen,
   setMobilePanel,
 }) {
+  useI18n();
   const { db, auth, draftOrders, checkingOut, lastReceipt, printReceipt } =
     useRegister();
   const { cart, setCart, buyer, taxOn, setTaxOn } = draftOrders;
   return (
-    <aside className="cart" aria-label="Current order">
+    <aside className="cart" aria-label={t("current_order_label")}>
       <div className="cart-head">
         <div className="cart-head-row">
           <div>
             <h2>
-              Orders <span>{draftOrders.drafts.length}</span>
+              {t("orders_label")} <span>{draftOrders.drafts.length}</span>
             </h2>
             <small>
-              {cart.length} {cart.length === 1 ? "item" : "items"} ·{" "}
-              {draftOrders.saving ? "Saving…" : "Saved on this device"}
+              {t("item_count", { count: cart.length })} ·{" "}
+              {draftOrders.saving ? t("saving") : t("saved_on_this_device")}
             </small>
           </div>
           <div className="cart-actions">
             {lastReceipt && (
               <button
                 className="icon-button"
-                title="Print last receipt"
-                aria-label="Print last receipt"
+                title={t("print_last_receipt")}
+                aria-label={t("print_last_receipt")}
                 onClick={() => printReceipt(lastReceipt)}
               >
                 <Printer size={19} />
@@ -47,11 +49,11 @@ export function Cart({
                 setMobilePanel("catalog");
               }}
             >
-              <Plus size={15} /> New order
+              <Plus size={15} /> {t("new_order")}
             </button>
           </div>
         </div>
-        <div className="draft-list" aria-label="Open orders">
+        <div className="draft-list" aria-label={t("open_orders")}>
           {draftOrders.drafts.map((row, index) => (
             <div
               key={row.id}
@@ -72,15 +74,17 @@ export function Cart({
                   {row.buyer.buyer_name ||
                     row.buyer.buyer_phone ||
                     row.buyer.buyer_email ||
-                    `Order ${index + 1}`}
+                    t("order_number", { number: index + 1 })}
                 </strong>
-                <small>
-                  {row.items.length} {row.items.length === 1 ? "item" : "items"}
-                </small>
+                <small>{t("item_count", { count: row.items.length })}</small>
               </button>
               <button
                 className="draft-discard"
-                aria-label={`Discard ${row.buyer.buyer_name || `order ${index + 1}`}`}
+                aria-label={t("discard_order", {
+                  order:
+                    row.buyer.buyer_name ||
+                    t("draft_order_number", { number: index + 1 }),
+                })}
                 disabled={checkingOut}
                 onClick={() => draftOrders.discard(row.id)}
               >
@@ -96,12 +100,12 @@ export function Cart({
         onClick={openBuyer}
       >
         <span>
-          <small>BUYER DETAILS</small>
+          <small>{t("buyer_details_label")}</small>
           <strong>
             {buyer.buyer_name ||
               buyer.buyer_phone ||
               buyer.buyer_email ||
-              "Add buyer details"}
+              t("add_buyer_details")}
           </strong>
           {(buyer.buyer_phone || buyer.buyer_email) && buyer.buyer_name && (
             <small>
@@ -113,12 +117,12 @@ export function Cart({
         </span>
         <Pencil size={17} />
       </button>
-      <div className="cart-items" aria-label="Order items">
+      <div className="cart-items" aria-label={t("order_items")}>
         {cart.length === 0 ? (
           <div className="empty">
             <ShoppingCart size={30} />
-            <strong>No items yet</strong>
-            <p>Choose a product to add it here.</p>
+            <strong>{t("no_items_yet")}</strong>
+            <p>{t("choose_a_product_to_add_it_here")}</p>
           </div>
         ) : (
           cart.map((item) => (
@@ -127,7 +131,9 @@ export function Cart({
                 <strong>{item.product_name}</strong>
                 <button
                   className="icon-button danger"
-                  aria-label={`Remove ${item.product_name}`}
+                  aria-label={t("remove_product", {
+                    product: item.product_name,
+                  })}
                   disabled={checkingOut}
                   onClick={() =>
                     setCart((old) =>
@@ -149,7 +155,9 @@ export function Cart({
                   <button
                     disabled={checkingOut || item.quantity <= 1}
                     onClick={() => changeQuantity(item.id, -1)}
-                    aria-label={`Decrease ${item.product_name} quantity`}
+                    aria-label={t("decrease_quantity", {
+                      product: item.product_name,
+                    })}
                   >
                     <Minus size={14} />
                   </button>
@@ -157,7 +165,9 @@ export function Cart({
                   <button
                     disabled={checkingOut || item.quantity >= 1000}
                     onClick={() => changeQuantity(item.id, 1)}
-                    aria-label={`Increase ${item.product_name} quantity`}
+                    aria-label={t("increase_quantity", {
+                      product: item.product_name,
+                    })}
                   >
                     <Plus size={14} />
                   </button>
@@ -170,11 +180,14 @@ export function Cart({
       </div>
       <div className="totals">
         <div>
-          <span>Subtotal</span>
+          <span>{t("subtotal")}</span>
           <strong>{money(subtotal)}</strong>
         </div>
         <label className="tax-switch">
-          <span>Include tax ({auth.tax_percentage}%)</span>
+          <span>
+            {t("include_tax_label")}
+            {auth.tax_percentage}%)
+          </span>
           <input
             type="checkbox"
             checked={taxOn}
@@ -183,11 +196,11 @@ export function Cart({
           />
         </label>
         <div>
-          <span>Tax</span>
+          <span>{t("tax_label")}</span>
           <strong>{money(tax)}</strong>
         </div>
         <div className="total">
-          <span>Total</span>
+          <span>{t("total_label")}</span>
           <strong>{money(total)}</strong>
         </div>
         <button
@@ -195,7 +208,7 @@ export function Cart({
           disabled={!cart.length || !db || !draftOrders.ready || checkingOut}
           onClick={openCheckoutPreview}
         >
-          Review sale <span>{money(total)}</span>
+          {t("review_sale")} <span>{money(total)}</span>
         </button>
       </div>
     </aside>

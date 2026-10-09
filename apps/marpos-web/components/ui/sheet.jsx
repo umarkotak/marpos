@@ -1,3 +1,4 @@
+import { t, useI18n } from "@/lib/i18n";
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"
@@ -52,6 +53,7 @@ function SheetContent({
   showCloseButton = true,
   ...props
 }) {
+  useI18n()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -78,7 +80,7 @@ function SheetContent({
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("close")}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

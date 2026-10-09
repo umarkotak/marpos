@@ -48,7 +48,7 @@ status-service:
     sudo launchctl print system/com.marpos-api
 
 logs:
-    tail -f apps/api/marpos-api.error.log
+    tail -f apps/api/marpos-api.log
 
 deploy:
     #!/bin/sh

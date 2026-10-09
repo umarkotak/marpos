@@ -1,3 +1,4 @@
+import { t, message, useI18n } from "@/lib/i18n";
 import { AddonDialog } from "@/components/pos/addon-dialog";
 import { BuyerDialog } from "@/components/pos/buyer-dialog";
 import { SalePreview } from "@/components/pos/sale-preview";
@@ -10,6 +11,7 @@ import { productCategories } from "@/lib/catalog";
 import { useQueryState } from "@/lib/navigation";
 
 export default function PosPage() {
+  useI18n();
   const {
     db,
     auth,
@@ -95,7 +97,7 @@ export default function PosPage() {
   function confirmChoices() {
     for (const group of selected.addon_groups)
       if (group.required && !(choices[group.id] || []).length) {
-        setNotice(`Choose an option in ${group.name}.`);
+        setNotice(message("choose_option_in_group", { group: group.name }));
         return;
       }
     const addons = selected.addon_groups.flatMap((group) =>
@@ -157,7 +159,9 @@ export default function PosPage() {
       return;
     }
     if (new Date(auth.offline_expires_at).getTime() <= Date.now()) {
-      setNotice("Offline access expired. Sign in online before checkout.");
+      setNotice(
+        message("offline_access_expired_sign_in_online_before_checkout"),
+      );
       return;
     }
     checkoutLock.current = true;
@@ -190,11 +194,13 @@ export default function PosPage() {
       setLastReceipt({ sale, items: cart });
       setPending((count) => count + 1);
       setNotice(
-        `Sale saved. Temporary receipt ${sale.receipt_number.slice(-8)}.`,
+        message("sale_saved_receipt", {
+          number: sale.receipt_number.slice(-8),
+        }),
       );
       syncSales(db, auth);
     } catch {
-      setNotice("Sale was not saved. Keep the cart and try again.");
+      setNotice(message("sale_was_not_saved_keep_the_cart_and_try_again"));
     } finally {
       checkoutLock.current = false;
       setCheckingOut(false);
@@ -225,19 +231,19 @@ export default function PosPage() {
         <div
           className="pos-mobile-switch"
           role="group"
-          aria-label="Point of sale view"
+          aria-label={t("point_of_sale_view")}
         >
           <button
             className={mobilePanel === "catalog" ? "active" : ""}
             onClick={() => setMobilePanel("catalog")}
           >
-            Products
+            {t("products")}
           </button>
           <button
             className={mobilePanel === "order" ? "active" : ""}
             onClick={() => setMobilePanel("order")}
           >
-            Current order · {cart.length}
+            {t("current_order_label")} {cart.length}
           </button>
         </div>
         <Catalog
