@@ -469,6 +469,9 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .report-tabs { display:inline-flex; gap:4px; padding:4px; border:1px solid #dfe7e3; background:#eaf0ed; border-radius:10px; margin-bottom:8px; }
 .report-tabs button { padding:9px 22px; border:0; border-radius:7px; background:transparent; color:#60776b; font-weight:600; }
 .report-tabs button.active { background:white; color:#147154; box-shadow:0 1px 4px #183d2414; }
+.order-detail .order-detail-tabs { display:flex; flex-shrink:0; width:auto; margin:12px 24px 0; }
+.order-detail-tabs button { flex:1; }
+.order-detail-tabs + .modal-body .correction-history { margin-top:0; }
 .earnings-tabs { display:flex; width:max-content; margin:12px 0 4px; }
 .reports-page h1:focus { outline:none; }
 .summary-cards { grid-template-columns:repeat(4,minmax(0,1fr)); }
@@ -517,6 +520,7 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .draft-list button { border:0; background:transparent; }
 .draft-select { min-width:0; padding:7px 4px 7px 9px; text-align:left; }
 .draft-select strong { display:block; max-width:125px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.draft-select small { max-width:125px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .draft-list small { display:block; color:#6c8076; font-size:11px; }
 .draft-discard { align-self:flex-start; padding:7px 6px; color:#84958b; }
 .draft-select:focus-visible,.draft-discard:focus-visible,.buyer-summary:focus-visible { outline:2px solid #168464; outline-offset:2px; }
@@ -527,6 +531,13 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .buyer-summary strong { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .buyer-modal .modal-body .buyer-fields { padding:0 0 14px; }
 .buyer-modal .buyer-fields legend { display:none; }
+.payment-method-note { border:0; padding:0; margin:14px 0; min-width:0; font-size:12px; }
+.payment-method-note legend { margin-bottom:6px; }
+.payment-method-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.payment-method-options label { display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:8px; border:1px solid #d8e5dd; border-radius:9px; cursor:pointer; }
+.payment-method-options label:has(input:checked) { background:#e4f4eb; border-color:#168464; }
+.payment-method-options input { margin:0; accent-color:#168464; }
+.payment-method-note:disabled label { cursor:default; opacity:.6; }
 .order-edit-form>fieldset { border:0; padding:0; display:grid; gap:16px; min-width:0; }
 .order-edit-form legend { font-size:18px; font-weight:700; }
 .order-edit-item,.order-add-product,.correction-history details { padding:14px; border:1px solid #dce6e0; border-radius:8px; display:grid; gap:10px; }

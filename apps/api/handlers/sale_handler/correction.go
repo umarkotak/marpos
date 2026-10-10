@@ -41,15 +41,16 @@ func Correct(c fiber.Ctx) error {
 	}
 	defer tx.Rollback()
 	var old struct {
-		RegisterID  string    `db:"register_id"`
-		CashierID   string    `db:"cashier_id"`
-		CreatedAt   time.Time `db:"created_at"`
-		CompletedAt time.Time `db:"completed_at"`
-		Receipt     string    `db:"receipt_number"`
-		GrandTotal  int64     `db:"grand_total"`
-		Revision    int64     `db:"revision"`
+		RegisterID        string    `db:"register_id"`
+		CashierID         string    `db:"cashier_id"`
+		CreatedAt         time.Time `db:"created_at"`
+		CompletedAt       time.Time `db:"completed_at"`
+		Receipt           string    `db:"receipt_number"`
+		GrandTotal        int64     `db:"grand_total"`
+		Revision          int64     `db:"revision"`
+		PaymentMethodNote string    `db:"payment_method_note"`
 	}
-	if tx.Get(&old, `SELECT register_id,cashier_id,created_at,completed_at,receipt_number,grand_total,revision FROM sales WHERE store_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE`, storeID, id) != nil {
+	if tx.Get(&old, `SELECT register_id,cashier_id,created_at,completed_at,receipt_number,grand_total,revision,payment_method_note FROM sales WHERE store_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE`, storeID, id) != nil {
 		return render.Failure(c, 404, "order_not_found", "Order was not found.")
 	}
 	if input.Revision != old.Revision {
@@ -62,6 +63,7 @@ func Correct(c fiber.Ctx) error {
 	sale.CreatedAt = old.CreatedAt
 	sale.CompletedAt = old.CompletedAt
 	sale.ReceiptNumber = old.Receipt
+	sale.PaymentMethodNote = old.PaymentMethodNote
 	sale.DeviceID = uuid.NewString()
 	sale.OperationID = uuid.NewString()
 	if err = validateSale(&sale); err != nil {

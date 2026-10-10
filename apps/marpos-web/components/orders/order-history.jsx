@@ -5,6 +5,7 @@ import { BuyerFields, blankBuyer, buyerError } from "@/components/buyer-fields";
 import { saveSale } from "@/lib/local-db";
 import { updateQuery, useQueryState } from "@/lib/navigation";
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { localSales } from "@/lib/local-db";
 
 import { api } from "@/lib/api";
@@ -24,7 +25,9 @@ export function OrdersPage({
   const [recordStatus] = useQueryState("status");
   const trash = recordStatus === "deleted" && auth.is_superadmin;
   const [detail, setDetail] = useState(null);
+  const [detailTab, setDetailTab] = useState("details");
   const [orderID, setOrderID] = useQueryState("order");
+  useEffect(() => setDetailTab("details"), [orderID]);
   const [more, setMore] = useState(false);
   const admin =
     auth.role === "owner" || auth.role === "admin" || auth.is_superadmin;
@@ -330,6 +333,9 @@ export function OrdersPage({
             role="dialog"
             aria-modal="true"
             aria-label={t("order_details")}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeDetail();
+            }}
           >
             <div className="modal-head">
               <div>
@@ -341,8 +347,12 @@ export function OrdersPage({
                   )}
                 </p>
               </div>
-              <button className="icon-button" onClick={closeDetail}>
-                {t("close")}
+              <button
+                className="icon-button"
+                aria-label={t("close")}
+                onClick={closeDetail}
+              >
+                <X size={20} />
               </button>
             </div>
             {editing ? (
@@ -356,69 +366,121 @@ export function OrdersPage({
               </div>
             ) : (
               <>
-                <div className="modal-body">
-                  <div className="buyer-summary">
-                    <strong>{detail.sale.buyer_name || t("buyer")}</strong>
-                    <p>
-                      {detail.sale.buyer_phone} {detail.sale.buyer_email}
-                    </p>
-                  </div>
-                  {detail.items.map((item) => (
-                    <div className="receipt-line" key={item.id}>
-                      <span>
-                        {item.quantity} × {item.product_name}
-                        {item.addons?.map((addon) => (
-                          <small key={addon.id || addon.option_name}>
-                            + {addon.option_name}
-                          </small>
-                        ))}
-                      </span>
-                      <strong>{money(item.line_total)}</strong>
-                    </div>
+                <div
+                  className="report-tabs order-detail-tabs"
+                  role="tablist"
+                  aria-label={t("order_details")}
+                  onKeyDown={(event) => {
+                    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+                      return;
+                    event.preventDefault();
+                    const next = event.key === "Home"
+                      ? "details"
+                      : event.key === "End"
+                        ? "audit"
+                        : detailTab === "details" ? "audit" : "details";
+                    setDetailTab(next);
+                    event.currentTarget
+                      .querySelector(`#order-tab-${next}`)
+                      .focus();
+                  }}
+                >
+                  {[["details", "order_details"], ["audit", "audit_log"]].map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      id={`order-tab-${tab}`}
+                      role="tab"
+                      aria-selected={detailTab === tab}
+                      aria-controls={`order-panel-${tab}`}
+                      tabIndex={detailTab === tab ? 0 : -1}
+                      className={detailTab === tab ? "active" : ""}
+                      onClick={() => setDetailTab(tab)}
+                    >
+                      {t(label)}
+                    </button>
                   ))}
-                  <div className="receipt-line">
-                    <span>{t("subtotal")}</span>
-                    <strong>{money(detail.sale.subtotal)}</strong>
-                  </div>
-                  <div className="receipt-line">
-                    <span>
-                      {t("tax_label")}{" "}
-                      {detail.sale.tax_applied
-                        ? `(${detail.sale.tax_percentage}%)`
-                        : "excluded"}
-                    </span>
-                    <strong>{money(detail.sale.tax_total)}</strong>
-                  </div>
-                  <div className="receipt-line grand">
-                    <span>{t("total_label")}</span>
-                    <strong>{money(detail.sale.grand_total)}</strong>
-                  </div>
-                  <AuditHistory
-                    entries={detail.history || []}
-                    local={detail.sale.sync_status === "pending"}
-                  />
                 </div>
-                <div className="modal-foot">
-                  <button className="button secondary" onClick={closeDetail}>
-                    {t("close")}
-                  </button>
-                  {canEdit &&
-                    !detail.sale.sync_status &&
-                    !detail.sale.deleted_at && (
-                      <button
-                        className="button secondary"
-                        onClick={() => setEditing(true)}
-                      >
-                        {t("edit_order")}
-                      </button>
-                    )}
-                  <button
-                    className="button primary"
-                    onClick={() => onPrint(detail)}
-                  >
-                    {t("print_receipt")}
-                  </button>
+                <div
+                  className="modal-body"
+                  role="tabpanel"
+                  id={`order-panel-${detailTab}`}
+                  aria-labelledby={`order-tab-${detailTab}`}
+                  tabIndex={0}
+                >
+                  {detailTab === "details" ? (
+                    <>
+                      <div className="buyer-summary">
+                        <strong>{detail.sale.buyer_name || t("buyer")}</strong>
+                        <p>
+                          {detail.sale.buyer_phone} {detail.sale.buyer_email}
+                        </p>
+                      </div>
+                      {detail.sale.payment_method_note && (
+                        <div className="receipt-line">
+                          <span>{t("payment_method_note")}</span>
+                          <strong>
+                            {t(`payment_method_${detail.sale.payment_method_note}`)}
+                          </strong>
+                        </div>
+                      )}
+                      {detail.items.map((item) => (
+                        <div className="receipt-line" key={item.id}>
+                          <span>
+                            {item.quantity} × {item.product_name}
+                            {item.addons?.map((addon) => (
+                              <small key={addon.id || addon.option_name}>
+                                + {addon.option_name}
+                              </small>
+                            ))}
+                          </span>
+                          <strong>{money(item.line_total)}</strong>
+                        </div>
+                      ))}
+                      <div className="receipt-line">
+                        <span>{t("subtotal")}</span>
+                        <strong>{money(detail.sale.subtotal)}</strong>
+                      </div>
+                      <div className="receipt-line">
+                        <span>
+                          {t("tax_label")}{" "}
+                          {detail.sale.tax_applied
+                            ? `(${detail.sale.tax_percentage}%)`
+                            : "excluded"}
+                        </span>
+                        <strong>{money(detail.sale.tax_total)}</strong>
+                      </div>
+                      <div className="receipt-line grand">
+                        <span>{t("total_label")}</span>
+                        <strong>{money(detail.sale.grand_total)}</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <AuditHistory
+                      entries={detail.history || []}
+                      local={detail.sale.sync_status === "pending"}
+                    />
+                  )}
                 </div>
+                {detailTab === "details" && (
+                  <div className="modal-foot">
+                    {canEdit &&
+                      !detail.sale.sync_status &&
+                      !detail.sale.deleted_at && (
+                        <button
+                          className="button secondary"
+                          onClick={() => setEditing(true)}
+                        >
+                          {t("edit_order")}
+                        </button>
+                      )}
+                    <button
+                      className="button primary"
+                      onClick={() => onPrint(detail)}
+                    >
+                      {t("print_receipt")}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </section>

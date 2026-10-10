@@ -71,6 +71,8 @@ The store owner can invite and remove users. An admin can manage managers and ca
 
 ## Offline use
 
+The checkout confirmation has payment method note cards: Piutang (`unpaid`), QRIS (`qris`), or Tunai (`cash`). Tunai is selected by default. Each order keeps its own note through refresh and offline sync. Order details show the saved note. This records payment handled outside Marpos; it does not process a payment or manage receivables. The API also accepts an empty note. Apply migration `000013` with `just migrate-up` before you restart the API.
+
 Sign in and load the product catalog while online first. Open Marpos at `http://localhost:6031` for local use. In production, serve it over HTTPS. You can install it from your browser's **Install app** or **Add to Home Screen** action. After the first load, the app can open from its cached files even when the web server is down.
 
 You can complete cash sales in the same browser when the API, web server, or internet is unavailable. The browser saves sales on this device and shows a pending count. It retries sync when the API returns. Keep this device and browser until the pending count reaches zero. Do not clear browser site data while sales are pending.

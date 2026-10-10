@@ -49,20 +49,21 @@ type itemInput struct {
 
 type saleInput struct {
 	buyerInput
-	OperationID   string      `db:"operation_id" json:"operation_id"`
-	DeviceID      string      `db:"device_id" json:"device_id"`
-	ID            string      `db:"id" json:"id"`
-	RegisterID    string      `db:"register_id" json:"register_id"`
-	CashierID     string      `db:"cashier_id" json:"cashier_id"`
-	ReceiptNumber string      `db:"receipt_number" json:"receipt_number"`
-	CreatedAt     time.Time   `db:"created_at" json:"created_at"`
-	CompletedAt   time.Time   `db:"completed_at" json:"completed_at"`
-	TaxApplied    bool        `db:"tax_applied" json:"tax_applied"`
-	TaxPercentage float64     `db:"tax_percentage" json:"tax_percentage"`
-	Subtotal      int64       `db:"subtotal" json:"subtotal"`
-	TaxTotal      int64       `db:"tax_total" json:"tax_total"`
-	GrandTotal    int64       `db:"grand_total" json:"grand_total"`
-	Items         []itemInput `db:"items" json:"items"`
+	OperationID       string      `db:"operation_id" json:"operation_id"`
+	DeviceID          string      `db:"device_id" json:"device_id"`
+	ID                string      `db:"id" json:"id"`
+	RegisterID        string      `db:"register_id" json:"register_id"`
+	CashierID         string      `db:"cashier_id" json:"cashier_id"`
+	ReceiptNumber     string      `db:"receipt_number" json:"receipt_number"`
+	CreatedAt         time.Time   `db:"created_at" json:"created_at"`
+	CompletedAt       time.Time   `db:"completed_at" json:"completed_at"`
+	TaxApplied        bool        `db:"tax_applied" json:"tax_applied"`
+	TaxPercentage     float64     `db:"tax_percentage" json:"tax_percentage"`
+	Subtotal          int64       `db:"subtotal" json:"subtotal"`
+	TaxTotal          int64       `db:"tax_total" json:"tax_total"`
+	GrandTotal        int64       `db:"grand_total" json:"grand_total"`
+	PaymentMethodNote string      `db:"payment_method_note" json:"payment_method_note"`
+	Items             []itemInput `db:"items" json:"items"`
 }
 
 func Sync(c fiber.Ctx) error {
@@ -125,8 +126,8 @@ func Sync(c fiber.Ctx) error {
 		return render.Failure(c, 500, "database_error", "Could not assign an order number.")
 	}
 	reference := fmt.Sprintf("MP-%d-%05d", orderYear, orderNumber)
-	_, err = tx.Exec(`INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_year,order_number,reference,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderYear, orderNumber, reference, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail)
+	_, err = tx.Exec(`INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_year,order_number,reference,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email,payment_method_note)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderYear, orderNumber, reference, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail, sale.PaymentMethodNote)
 	if err != nil {
 		return render.Failure(c, 409, "sale_conflict", "Sale ID or receipt number is already in use.")
 	}
@@ -149,6 +150,11 @@ func Sync(c fiber.Ctx) error {
 }
 
 func validateSale(sale *saleInput) error {
+	switch sale.PaymentMethodNote {
+	case "", "unpaid", "qris", "cash":
+	default:
+		return errors.New("Check the payment method note.")
+	}
 	if err := sale.buyerInput.validate(); err != nil {
 		return err
 	}

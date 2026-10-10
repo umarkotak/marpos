@@ -12,7 +12,7 @@ export function SalePreview({
 }) {
   useI18n();
   const { auth, draftOrders, checkingOut } = useRegister();
-  const { cart, buyer, taxOn } = draftOrders;
+  const { cart, buyer, taxOn, paymentMethodNote, setPaymentMethodNote } = draftOrders;
   return (
     previewOpen && (
       <div
@@ -33,7 +33,6 @@ export function SalePreview({
         >
           <div className="modal-head">
             <div>
-              <small>{t("final_check")}</small>
               <h2>{t("review_sale")}</h2>
               <p>{t("check_the_order_before_you_complete_the_sale")}</p>
             </div>
@@ -56,6 +55,23 @@ export function SalePreview({
                   .join(" · ")}
               </span>
             </div>
+            <fieldset className="payment-method-note" disabled={checkingOut}>
+              <legend>{t("payment_method_note")}</legend>
+              <div className="payment-method-options">
+                {["unpaid", "qris", "cash"].map((method) => (
+                  <label key={method}>
+                    <input
+                      type="radio"
+                      name="payment_method_note"
+                      value={method}
+                      checked={paymentMethodNote === method}
+                      onChange={() => setPaymentMethodNote(method)}
+                    />
+                    {t(`payment_method_${method}`)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <h3>
               {t("items")}
               {cart.length})
@@ -100,18 +116,11 @@ export function SalePreview({
             </div>
             <div className="modal-foot">
               <button
-                className="button secondary"
-                disabled={checkingOut}
-                onClick={() => setPreviewOpen(false)}
-              >
-                {t("back_to_order")}
-              </button>
-              <button
                 className="button primary"
                 disabled={checkingOut}
                 onClick={checkout}
               >
-                {checkingOut ? t("saving_sale") : t("complete_cash_sale")}
+                {checkingOut ? t("saving_sale") : t("complete_sale")}
               </button>
             </div>
           </div>

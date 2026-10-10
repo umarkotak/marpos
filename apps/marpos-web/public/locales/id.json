@@ -651,5 +651,12 @@
   "store_slug_example": "toko-saya",
   "instagram_url_example": "https://www.instagram.com/tokoanda",
   "facebook_url_example": "https://www.facebook.com/tokoanda",
-  "tiktok_url_example": "https://www.tiktok.com/@tokoanda"
+  "tiktok_url_example": "https://www.tiktok.com/@tokoanda",
+  "payment_method_note": "Catatan metode pembayaran (opsional)",
+  "no_payment_method_note": "Tanpa catatan",
+  "payment_method_unpaid": "Piutang",
+  "payment_method_qris": "QRIS",
+  "payment_method_cash": "Tunai",
+  "complete_sale": "Selesaikan penjualan",
+  "error_check_the_payment_method_note": "Periksa catatan metode pembayaran."
 }

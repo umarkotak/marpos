@@ -15,19 +15,20 @@ import (
 
 type HistorySale struct {
 	buyerInput
-	Revision      int64      `db:"revision" json:"revision"`
-	ID            string     `db:"id" json:"id"`
-	OrderNumber   int64      `db:"order_number" json:"order_number"`
-	Reference     string     `db:"reference" json:"reference"`
-	ReceiptNumber string     `db:"receipt_number" json:"receipt_number"`
-	CashierName   string     `db:"cashier_name" json:"cashier_name"`
-	Subtotal      int64      `db:"subtotal" json:"subtotal"`
-	TaxApplied    bool       `db:"tax_applied" json:"tax_applied"`
-	TaxPercentage float64    `db:"tax_percentage" json:"tax_percentage"`
-	TaxTotal      int64      `db:"tax_total" json:"tax_total"`
-	GrandTotal    int64      `db:"grand_total" json:"grand_total"`
-	CompletedAt   time.Time  `db:"completed_at" json:"completed_at"`
-	DeletedAt     *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+	Revision          int64      `db:"revision" json:"revision"`
+	ID                string     `db:"id" json:"id"`
+	OrderNumber       int64      `db:"order_number" json:"order_number"`
+	Reference         string     `db:"reference" json:"reference"`
+	ReceiptNumber     string     `db:"receipt_number" json:"receipt_number"`
+	CashierName       string     `db:"cashier_name" json:"cashier_name"`
+	Subtotal          int64      `db:"subtotal" json:"subtotal"`
+	TaxApplied        bool       `db:"tax_applied" json:"tax_applied"`
+	TaxPercentage     float64    `db:"tax_percentage" json:"tax_percentage"`
+	TaxTotal          int64      `db:"tax_total" json:"tax_total"`
+	GrandTotal        int64      `db:"grand_total" json:"grand_total"`
+	PaymentMethodNote string     `db:"payment_method_note" json:"payment_method_note"`
+	CompletedAt       time.Time  `db:"completed_at" json:"completed_at"`
+	DeletedAt         *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 func History(c fiber.Ctx) error {
@@ -46,7 +47,7 @@ func History(c fiber.Ctx) error {
 		return render.Failure(c, 400, "invalid_offset", "Check the order page.")
 	}
 	items := []HistorySale{}
-	err = datastore.Get().Db.Select(&items, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision
+	err = datastore.Get().Db.Select(&items, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note
         FROM sales s JOIN users u ON u.id=s.cashier_id WHERE s.store_id=$1 AND (s.deleted_at IS NOT NULL)=$2
         ORDER BY s.completed_at DESC,s.id DESC LIMIT $3 OFFSET $4`, storeID, trash, limit, offset)
 	if err != nil {
@@ -64,7 +65,7 @@ func Detail(c fiber.Ctx) error {
 		return render.Failure(c, 400, "invalid_order", "Order ID is invalid.")
 	}
 	var sale HistorySale
-	err := datastore.Get().Db.Get(&sale, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision
+	err := datastore.Get().Db.Get(&sale, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note
         FROM sales s JOIN users u ON u.id=s.cashier_id WHERE s.store_id=$1 AND s.id=$2 AND (s.deleted_at IS NULL OR $3)`, storeID, saleID, auth_handler.IsSuperadmin(c))
 	if err != nil {
 		return render.Failure(c, 404, "order_not_found", "Order was not found.")

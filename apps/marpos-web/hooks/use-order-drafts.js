@@ -6,8 +6,9 @@ const newDraft = () => ({
   id: crypto.randomUUID(),
   created_at: new Date().toISOString(),
   items: [],
-  buyer: blankBuyer(),
+  buyer: { ...blankBuyer(), buyer_name: "Guest" },
   tax_on: true,
+  payment_method_note: "cash",
 });
 const newWorkspace = () => {
   const draft = newDraft();
@@ -30,6 +31,13 @@ export function useOrderDrafts(db, auth, onNotice) {
         .then((value) => {
           if (active) {
             current.current = value || newWorkspace();
+            current.current.drafts = current.current.drafts.map((row) => ({
+              ...row,
+              buyer: {
+                ...row.buyer,
+                buyer_name: row.buyer.buyer_name.trim() || "Guest",
+              },
+            }));
             setSaved(current.current);
             setReady(true);
           }
@@ -93,7 +101,11 @@ export function useOrderDrafts(db, auth, onNotice) {
       drafts: [
         ...current.current.drafts.filter(
           (item) =>
-            item.items.length || Object.values(item.buyer).some(Boolean),
+            item.items.length ||
+            (item.buyer.buyer_name && item.buyer.buyer_name !== "Guest") ||
+            item.buyer.buyer_phone ||
+            item.buyer.buyer_email ||
+            (item.payment_method_note && item.payment_method_note !== "cash"),
         ),
         row,
       ],
@@ -142,6 +154,8 @@ export function useOrderDrafts(db, auth, onNotice) {
     setBuyer: (buyer) => edit({ buyer }),
     taxOn: draft?.tax_on ?? true,
     setTaxOn: (tax_on) => edit({ tax_on }),
+    paymentMethodNote: draft?.payment_method_note || "cash",
+    setPaymentMethodNote: (payment_method_note) => edit({ payment_method_note }),
     drafts: ready ? saved.drafts : [],
     activeID: saved?.active_id,
     start,

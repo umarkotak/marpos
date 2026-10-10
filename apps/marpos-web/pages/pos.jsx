@@ -27,7 +27,7 @@ export default function PosPage() {
   const [search, setSearch] = useQueryState("q");
   const [selected, setSelected] = useState(null);
   const [choices, setChoices] = useState({});
-  const { cart, setCart, buyer, setBuyer, taxOn } = draftOrders;
+  const { cart, setCart, buyer, setBuyer, taxOn, paymentMethodNote } = draftOrders;
   const [buyerOpen, setBuyerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [buyerDraft, setBuyerDraft] = useState({
@@ -183,6 +183,7 @@ export default function PosPage() {
       subtotal,
       tax_total: tax,
       grand_total: total,
+      payment_method_note: paymentMethodNote,
       ...Object.fromEntries(
         Object.entries(buyer).map(([key, value]) => [key, value.trim()]),
       ),

@@ -71,19 +71,15 @@ export function Cart({
                 }}
               >
                 <strong>
-                  {row.buyer.buyer_name ||
-                    row.buyer.buyer_phone ||
-                    row.buyer.buyer_email ||
-                    t("order_number", { number: index + 1 })}
+                  {t("order_number", { number: index + 1 })}
                 </strong>
+                <small>{row.buyer.buyer_name}</small>
                 <small>{t("item_count", { count: row.items.length })}</small>
               </button>
               <button
                 className="draft-discard"
                 aria-label={t("discard_order", {
-                  order:
-                    row.buyer.buyer_name ||
-                    t("draft_order_number", { number: index + 1 }),
+                  order: t("draft_order_number", { number: index + 1 }),
                 })}
                 disabled={checkingOut}
                 onClick={() => draftOrders.discard(row.id)}
