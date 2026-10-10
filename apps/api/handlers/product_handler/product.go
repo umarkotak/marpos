@@ -81,9 +81,8 @@ type productInput struct {
 
 func List(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	role := auth_handler.StoreRole(c, storeID)
 	trash := c.Query("trash") == "true"
-	if role == "" || (trash && !auth_handler.IsSuperadmin(c)) {
+	if !auth_handler.StoreAccess(c, storeID, false) || (trash && !auth_handler.IsSuperadmin(c)) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
 	db := datastore.Get().Db
@@ -134,7 +133,7 @@ func List(c fiber.Ctx) error {
 
 func Categories(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	if auth_handler.StoreRole(c, storeID) == "" {
+	if !auth_handler.StoreAccess(c, storeID, false) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
 	categories := []string{"makanan", "minuman", "lainnya"}

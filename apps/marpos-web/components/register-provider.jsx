@@ -91,6 +91,10 @@ export function RegisterProvider({ children }) {
       setLastReceipt(null);
       await putMeta(localDB, "auth", saved);
       try {
+        if (store.role === "viewer") {
+          await loadCatalog(localDB, saved);
+          return;
+        }
         const device = await api(`/stores/${store.id}/device`, {
           method: "POST",
           body: { device_id: deviceID },

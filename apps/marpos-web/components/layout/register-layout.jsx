@@ -2,6 +2,7 @@ import { t, translateMessage, useI18n } from "@/lib/i18n";
 import { LanguageSelect } from "@/components/language-select";
 import { LoginScreen } from "@/components/auth/login-screen";
 import Head from "next/head";
+import { useEffect } from "react";
 import { CloudUpload, LogOut, X } from "lucide-react";
 import { useRegister } from "@/components/register-provider";
 import { RegisterSidebar } from "./register-sidebar";
@@ -35,10 +36,19 @@ export function RegisterLayout({ children }) {
   } = useRegister();
   const productID = /^\/products\/[^/]+\/edit$/.test(pathname);
   const productTrash = pathname === "/products/deleted";
+  const viewer = auth?.role === "viewer";
+  useEffect(() => {
+    if (viewer && tab === "pos") setTab("orders");
+  }, [viewer, tab]);
   const restricted =
-    ["finance", "reports", "settings", "audit"].includes(tab) &&
-    auth?.role === "cashier" &&
-    !auth?.is_superadmin;
+    (viewer && (
+      ["pos", "settings", "team"].includes(tab) ||
+      pathname === "/products/new" || productID
+    )) || (
+      ["finance", "reports", "settings", "audit"].includes(tab) &&
+      auth?.role === "cashier" &&
+      !auth?.is_superadmin
+    );
   return (
     <>
       <Head>

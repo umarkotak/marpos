@@ -32,7 +32,8 @@ export function FinancePage({ db, auth, pending, onNotice, onSaved }) {
     }).format(new Date()),
   });
   const [form, setForm] = useState(blank);
-  const admin = ["owner", "admin"].includes(auth.role) || auth.is_superadmin;
+  const viewer = auth.role === "viewer";
+  const admin = !viewer && (["owner", "admin"].includes(auth.role) || auth.is_superadmin);
   const cacheKey = `finance:${auth.store_id}:${range.from}:${range.to}:${trash}`;
   async function load() {
     if (!db || !validRange(range)) return;
@@ -147,89 +148,91 @@ export function FinancePage({ db, auth, pending, onNotice, onSaved }) {
           )}
         </p>
       </div>
-      <form className="form-card product-form" onSubmit={save}>
-        <h2>{t("new_record")}</h2>
-        <div className="form-grid">
-          <label>
-            {t("type")}
-            <select
-              value={form.mode}
-              onChange={(e) => setForm({ ...form, mode: e.target.value })}
-            >
-              <option value="expense">{t("expense")}</option>
-              <option value="income">{t("income")}</option>
-            </select>
-          </label>
-          <label>
-            {t("category")}
-            <input
-              required
-              list="finance-categories"
-              maxLength={80}
-              value={translateMessage(form.category)}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            />
-            <datalist id="finance-categories">
-              {[
-                t("staff_pay"),
-                t("rent"),
-                t("utilities"),
-                t("transport"),
-                t("supplies"),
-                t("other_income"),
-                t("other"),
-              ].map((category) => (
-                <option key={category} value={category} />
-              ))}
-            </datalist>
-          </label>
-          <label>
-            {t("amount_idr")}
-            <IdrInput
-              required
-              min={1}
-              value={form.amount}
-              onValueChange={(amount) => setForm({ ...form, amount })}
-            />
-          </label>
-          <label>
-            {t("date_wib")}
-            <input
-              required
-              type="date"
-              max={storeDate()}
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-            />
-          </label>
-          <label>
-            {t("time_wib")}
-            <input
-              required
-              type="time"
-              value={form.hour}
-              onChange={(e) => setForm({ ...form, hour: e.target.value })}
-            />
-          </label>
-          <label>
-            {t("description")}
-            <input
-              required
-              maxLength={1000}
-              placeholder={t("daily_pay_for_two_staff")}
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-            />
-          </label>
-        </div>
-        <div className="form-actions">
-          <button className="button primary" disabled={busy || !db}>
-            {busy ? t("saving") : t("save_record")}
-          </button>
-        </div>
-      </form>
+      {!viewer && (
+        <form className="form-card product-form" onSubmit={save}>
+          <h2>{t("new_record")}</h2>
+          <div className="form-grid">
+            <label>
+              {t("type")}
+              <select
+                value={form.mode}
+                onChange={(e) => setForm({ ...form, mode: e.target.value })}
+              >
+                <option value="expense">{t("expense")}</option>
+                <option value="income">{t("income")}</option>
+              </select>
+            </label>
+            <label>
+              {t("category")}
+              <input
+                required
+                list="finance-categories"
+                maxLength={80}
+                value={translateMessage(form.category)}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              />
+              <datalist id="finance-categories">
+                {[
+                  t("staff_pay"),
+                  t("rent"),
+                  t("utilities"),
+                  t("transport"),
+                  t("supplies"),
+                  t("other_income"),
+                  t("other"),
+                ].map((category) => (
+                  <option key={category} value={category} />
+                ))}
+              </datalist>
+            </label>
+            <label>
+              {t("amount_idr")}
+              <IdrInput
+                required
+                min={1}
+                value={form.amount}
+                onValueChange={(amount) => setForm({ ...form, amount })}
+              />
+            </label>
+            <label>
+              {t("date_wib")}
+              <input
+                required
+                type="date"
+                max={storeDate()}
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </label>
+            <label>
+              {t("time_wib")}
+              <input
+                required
+                type="time"
+                value={form.hour}
+                onChange={(e) => setForm({ ...form, hour: e.target.value })}
+              />
+            </label>
+            <label>
+              {t("description")}
+              <input
+                required
+                maxLength={1000}
+                placeholder={t("daily_pay_for_two_staff")}
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+              />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button className="button primary" disabled={busy || !db}>
+              {busy ? t("saving") : t("save_record")}
+            </button>
+          </div>
+        </form>
+      )}
       <div className="heading-row">
         <RangeFilter range={range} onChange={setRange} />
         {auth.is_superadmin && (

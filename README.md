@@ -128,7 +128,9 @@ These paths are Next.js pages. The PWA saves the route pages and their scripts f
 
 `SUPERADMIN_EMAILS` in `apps/api/.env` is a comma-separated list of verified Google account emails. It defaults to `umarkotak@gmail.com` when unset. To add another user, keep the first email and add the next email to this list. Restart the API after a change.
 
-Only superadmins can view deleted lists and restore orders, products, or financial records. The API checks this permission on every request. Owners, store admins, and superadmins can soft-delete orders. Product and financial deletion keeps the existing owner and admin access. Superadmins still need membership in the store. Restore actions need the server online. Refresh online to update the saved account permissions.
+Superadmins can see all stores in Manage stores and the store switcher. Stores they have not joined show **View only**. They can view orders, products, income and expenses, reports, and audit logs for those stores. They cannot complete sales, edit records, delete or restore records, change settings, or manage the team without store membership. Existing member permissions stay the same.
+
+Only superadmins can view deleted lists. Restoring orders, products, or financial records also needs store membership. The API checks permissions on every request. Owners, store admins, and member superadmins can soft-delete orders. Product and financial deletion keeps the existing owner and admin access. Restore actions need the server online. Refresh online to update the saved account permissions. This change needs no database migration.
 
 ## Buyers, held orders, and corrections
 

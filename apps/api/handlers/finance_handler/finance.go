@@ -27,7 +27,7 @@ type Entry struct {
 
 func List(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	if !auth_handler.StoreAccess(c, storeID, true) {
+	if !auth_handler.StoreAccess(c, storeID, false) || (!auth_handler.IsSuperadmin(c) && !auth_handler.StoreAccess(c, storeID, true)) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot view store finances.")
 	}
 	trash := c.Query("trash") == "true"
@@ -134,7 +134,7 @@ type Hour struct {
 
 func Report(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	if !auth_handler.StoreAccess(c, storeID, true) {
+	if !auth_handler.StoreAccess(c, storeID, false) || (!auth_handler.IsSuperadmin(c) && !auth_handler.StoreAccess(c, storeID, true)) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot view store reports.")
 	}
 	from, to, err := dates(c)

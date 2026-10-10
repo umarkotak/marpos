@@ -40,6 +40,7 @@ export function RegisterSidebar({
 }) {
   useI18n();
   const { setOpenMobile } = useSidebar();
+  const viewer = auth.role === "viewer";
   function navigate(nextTab, event) {
     if (
       event &&
@@ -94,16 +95,18 @@ export function RegisterSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>{t("store")}</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={tab === "pos"}
-                tooltip={t("point_of_sale")}
-                render={<a href={pagePaths.pos} />}
-                onClick={(event) => navigate("pos", event)}
-              >
-                <ShoppingCart /> <span>{t("point_of_sale")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {!viewer && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={tab === "pos"}
+                  tooltip={t("point_of_sale")}
+                  render={<a href={pagePaths.pos} />}
+                  onClick={(event) => navigate("pos", event)}
+                >
+                  <ShoppingCart /> <span>{t("point_of_sale")}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 isActive={tab === "products"}
@@ -163,17 +166,19 @@ export function RegisterSidebar({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={tab === "team"}
-                tooltip={t("team")}
-                render={<a href={pagePaths.team} />}
-                onClick={(event) => navigate("team", event)}
-              >
-                <Users /> <span>{t("team")}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {(auth.role !== "cashier" || auth.is_superadmin) && (
+            {!viewer && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={tab === "team"}
+                  tooltip={t("team")}
+                  render={<a href={pagePaths.team} />}
+                  onClick={(event) => navigate("team", event)}
+                >
+                  <Users /> <span>{t("team")}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            {!viewer && (auth.role !== "cashier" || auth.is_superadmin) && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={tab === "settings"}

@@ -673,5 +673,6 @@
   "payment_method_qris": "QRIS",
   "payment_method_cash": "Cash",
   "complete_sale": "Complete sale",
-  "error_check_the_payment_method_note": "Check the payment method note."
+  "error_check_the_payment_method_note": "Check the payment method note.",
+  "view_only": "View only"
 }

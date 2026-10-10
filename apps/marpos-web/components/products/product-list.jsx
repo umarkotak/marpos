@@ -10,6 +10,7 @@ export function ProductList() {
   useI18n();
   const { auth, db, products, setNotice, loadCatalog } = useRegister();
   const { pathname } = useLocation();
+  const viewer = auth.role === "viewer";
   const [productSearch, setProductSearch] = useState("");
   const [productCategory, setProductCategory] = useState("all");
   const [productSort, setProductSort] = useState("name");
@@ -100,7 +101,7 @@ export function ProductList() {
               : t("set_prices_and_add_on_choices_for_this_store")}
           </p>
         </div>
-        {!productTrash && (auth.role !== "cashier" || auth.is_superadmin) && (
+        {!productTrash && !viewer && (auth.role !== "cashier" || auth.is_superadmin) && (
           <button
             className="button primary"
             onClick={() => navigate("/products/new")}
@@ -201,7 +202,7 @@ export function ProductList() {
             </div>
             <strong>{money(product.price)}</strong>
             {productTrash ? (
-              auth.is_superadmin && (
+              !viewer && auth.is_superadmin && (
                 <button
                   className="button secondary"
                   onClick={() => changeProduct(product, true)}
@@ -211,7 +212,7 @@ export function ProductList() {
               )
             ) : (
               <div className="product-actions">
-                {(auth.role === "owner" ||
+                {!viewer && (auth.role === "owner" ||
                   auth.role === "admin" ||
                   auth.is_superadmin) && (
                   <button
@@ -222,7 +223,7 @@ export function ProductList() {
                     <Trash2 size={17} />
                   </button>
                 )}
-                {(auth.role !== "cashier" || auth.is_superadmin) && (
+                {!viewer && (auth.role !== "cashier" || auth.is_superadmin) && (
                   <button
                     className="icon-button"
                     aria-label={t("edit_named_product", {

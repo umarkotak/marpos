@@ -29,9 +29,11 @@ export function OrdersPage({
   const [orderID, setOrderID] = useQueryState("order");
   useEffect(() => setDetailTab("details"), [orderID]);
   const [more, setMore] = useState(false);
-  const admin =
-    auth.role === "owner" || auth.role === "admin" || auth.is_superadmin;
-  const canEdit = auth.role === "owner" || auth.is_superadmin;
+  const viewer = auth.role === "viewer";
+  const admin = !viewer &&
+    (auth.role === "owner" || auth.role === "admin" || auth.is_superadmin);
+  const canEdit = !viewer &&
+    (auth.role === "owner" || auth.is_superadmin);
   const [editing, setEditing] = useState(false);
   const [repair, setRepair] = useState(null),
     [repairBuyer, setRepairBuyer] = useState(blankBuyer),
@@ -251,7 +253,7 @@ export function OrdersPage({
                           {t("edit_order")}
                         </button>
                       )}
-                      {order.local &&
+                      {!viewer && order.local &&
                         !order.buyer_name &&
                         !order.buyer_phone &&
                         !order.buyer_email &&
@@ -266,7 +268,7 @@ export function OrdersPage({
                             {t("add_buyer_details")}
                           </button>
                         )}
-                      {(trash ? auth.is_superadmin : admin) && !order.local && (
+                      {!viewer && (trash ? auth.is_superadmin : admin) && !order.local && (
                         <button
                           className="button secondary"
                           onClick={() => change(order, trash)}
@@ -292,7 +294,7 @@ export function OrdersPage({
           </button>
         )}
       </div>
-      {repair && (
+      {repair && !viewer && (
         <div className="overlay">
           <form className="modal" onSubmit={saveBuyer}>
             <div className="modal-head">
@@ -355,7 +357,7 @@ export function OrdersPage({
                 <X size={20} />
               </button>
             </div>
-            {editing ? (
+            {editing && !viewer ? (
               <div className="modal-body">
                 <OrderEditor
                   detail={detail}

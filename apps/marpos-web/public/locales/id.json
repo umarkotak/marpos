@@ -658,5 +658,6 @@
   "payment_method_qris": "QRIS",
   "payment_method_cash": "Tunai",
   "complete_sale": "Selesaikan penjualan",
-  "error_check_the_payment_method_note": "Periksa catatan metode pembayaran."
+  "error_check_the_payment_method_note": "Periksa catatan metode pembayaran.",
+  "view_only": "Hanya lihat"
 }

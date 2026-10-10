@@ -13,7 +13,7 @@ import (
 
 func List(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	if !auth_handler.StoreAccess(c, storeID, true) {
+	if !auth_handler.StoreAccess(c, storeID, false) || (!auth_handler.IsSuperadmin(c) && !auth_handler.StoreAccess(c, storeID, true)) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot view this store's audit log.")
 	}
 	offset, err := strconv.Atoi(c.Query("offset", "0"))

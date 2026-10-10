@@ -125,6 +125,13 @@ func Require(c fiber.Ctx) error {
 }
 
 func StoreAccess(c fiber.Ctx, storeID string, edit bool) bool {
+	if !edit && IsSuperadmin(c) {
+		if _, err := uuid.Parse(storeID); err != nil {
+			return false
+		}
+		var exists bool
+		return datastore.Get().Db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM stores WHERE id=$1)`, storeID) == nil && exists
+	}
 	role := StoreRole(c, storeID)
 	return role != "" && (!edit || role == "owner" || role == "admin" || role == "manager" || IsSuperadmin(c))
 }

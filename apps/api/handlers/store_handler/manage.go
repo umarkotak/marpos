@@ -30,9 +30,9 @@ type Store struct {
 
 func List(c fiber.Ctx) error {
 	stores := []Store{}
-	err := datastore.Get().Db.Select(&stores, `SELECT s.id,s.name,s.slug,s.address,s.google_maps_url,s.instagram_url,s.facebook_url,s.tiktok_url,r.id AS register_id,s.tax_percentage,usr.role
-        FROM user_store_roles usr JOIN stores s ON s.id=usr.store_id JOIN registers r ON r.store_id=s.id
-        WHERE usr.user_id=$1 ORDER BY s.created_at`, c.Locals("user_id"))
+	err := datastore.Get().Db.Select(&stores, `SELECT s.id,s.name,s.slug,s.address,s.google_maps_url,s.instagram_url,s.facebook_url,s.tiktok_url,r.id AS register_id,s.tax_percentage,COALESCE(usr.role,'viewer') AS role
+        FROM stores s JOIN registers r ON r.store_id=s.id LEFT JOIN user_store_roles usr ON usr.store_id=s.id AND usr.user_id=$1
+        WHERE usr.user_id IS NOT NULL OR $2 ORDER BY s.created_at`, c.Locals("user_id"), auth_handler.IsSuperadmin(c))
 	if err != nil {
 		return render.Failure(c, 500, "database_error", "Could not load stores.")
 	}

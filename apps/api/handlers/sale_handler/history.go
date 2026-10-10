@@ -33,8 +33,7 @@ type HistorySale struct {
 
 func History(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	role := auth_handler.StoreRole(c, storeID)
-	if role == "" {
+	if !auth_handler.StoreAccess(c, storeID, false) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
 	trash := c.Query("trash") == "true"
@@ -58,7 +57,7 @@ func History(c fiber.Ctx) error {
 
 func Detail(c fiber.Ctx) error {
 	storeID, saleID := c.Params("store_id"), c.Params("sale_id")
-	if auth_handler.StoreRole(c, storeID) == "" {
+	if !auth_handler.StoreAccess(c, storeID, false) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
 	if _, err := uuid.Parse(saleID); err != nil {

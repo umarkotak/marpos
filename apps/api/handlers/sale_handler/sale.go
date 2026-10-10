@@ -68,7 +68,7 @@ type saleInput struct {
 
 func Sync(c fiber.Ctx) error {
 	storeID := c.Params("store_id")
-	if !auth_handler.StoreAccess(c, storeID, false) {
+	if auth_handler.StoreRole(c, storeID) == "" {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
 	var sale saleInput

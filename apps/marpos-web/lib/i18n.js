@@ -72,4 +72,5 @@ export const roleLabel = (value) =>
     admin: t("admin"),
     manager: t("manager"),
     cashier: t("cashier"),
+    viewer: t("view_only"),
   })[value] || value;
