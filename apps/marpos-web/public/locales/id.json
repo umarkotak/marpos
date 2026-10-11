@@ -157,6 +157,7 @@
   "subtotal": "Subtotal",
   "tax_label": "Pajak",
   "print_receipt": "Cetak struk",
+  "draft_receipt": "Struk pesanan · Belum selesai",
   "corrected_order_revision": "Pesanan dikoreksi · Revisi",
   "thank_you": "Terima kasih.",
   "add_ons": "TAMBAHAN",

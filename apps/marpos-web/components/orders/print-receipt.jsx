@@ -30,14 +30,19 @@ export function PrintReceipt({ detail, storeName, storeAddress }) {
       )}
       <hr />
       {items.map((item) => (
-        <div key={item.id}>
+        <div className="receipt-item" key={item.id}>
           <div className="receipt-line">
             <span>
               {item.quantity} × {item.product_name}
             </span>
             <span>{money(item.line_total)}</span>
           </div>
-          <small>{item.sku} · {t("unit_price_idr")}: {money(item.unit_price)}<br /></small>
+          <div className="receipt-item-price">
+            <small>{item.quantity} × {money(item.unit_price)}</small>
+            {item.discount_total > 0 && (
+              <small className="receipt-item-discount">{t("discount")}: −{money(item.discount_total)}{item.discount_per_unit > 0 && <><br />({money(item.discount_per_unit)} {t("per_unit")})</>}</small>
+            )}
+          </div>
           {item.product_description && <small>{item.product_description}<br /></small>}
           {item.addons?.map((addon) => (
             <small key={addon.id || addon.option_name}>
@@ -46,24 +51,9 @@ export function PrintReceipt({ detail, storeName, storeAddress }) {
               <br />
             </small>
           ))}
-          {item.discount_total > 0 && (
-            <small>{t("discount")}: −{money(item.discount_total)}{item.discount_per_unit > 0 && ` (${money(item.discount_per_unit)} ${t("per_unit")})`}<br /></small>
-          )}
         </div>
       ))}
       <hr />
-      {sale.discount_total > 0 && (
-        <>
-          <div className="receipt-line">
-            <span>{t("subtotal_before_discount")}</span>
-            <span>{money(sale.subtotal + sale.discount_total)}</span>
-          </div>
-          <div className="receipt-line">
-            <span>{t("discount")}</span>
-            <span>−{money(sale.discount_total)}</span>
-          </div>
-        </>
-      )}
       <div className="receipt-line">
         <span>{t("subtotal")}</span>
         <span>{money(sale.subtotal)}</span>

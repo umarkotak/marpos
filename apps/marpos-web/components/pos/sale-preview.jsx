@@ -1,5 +1,5 @@
 import { t, useI18n } from "@/lib/i18n";
-import { X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
 export function SalePreview({
@@ -12,7 +12,7 @@ export function SalePreview({
   checkout,
 }) {
   useI18n();
-  const { auth, draftOrders, checkingOut } = useRegister();
+  const { auth, draftOrders, checkingOut, printReceipt } = useRegister();
   const { cart, buyer, taxOn, paymentMethodNote, setPaymentMethodNote } = draftOrders;
   return (
     previewOpen && (
@@ -124,6 +124,28 @@ export function SalePreview({
               <strong>{money(total)}</strong>
             </div>
             <div className="modal-foot">
+              <button
+                className="button secondary"
+                disabled={checkingOut || !draftOrders.ready || !cart.length}
+                onClick={() => printReceipt({
+                  sale: {
+                    ...buyer,
+                    reference: t("draft_receipt"),
+                    completed_at: new Date().toISOString(),
+                    cashier_name: auth.name,
+                    payment_method_note: paymentMethodNote,
+                    tax_applied: taxOn,
+                    tax_percentage: auth.tax_percentage,
+                    subtotal,
+                    discount_total: discountTotal,
+                    tax_total: tax,
+                    grand_total: total,
+                  },
+                  items: cart,
+                })}
+              >
+                <Printer size={16} /> {t("print_receipt")}
+              </button>
               <button
                 className="button primary"
                 disabled={checkingOut}

@@ -157,6 +157,7 @@
   "subtotal": "Subtotal",
   "tax_label": "Tax",
   "print_receipt": "Print receipt",
+  "draft_receipt": "Order receipt · Not completed",
   "corrected_order_revision": "Corrected order · Revision",
   "thank_you": "Thank you.",
   "add_ons": "ADD-ONS",

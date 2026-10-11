@@ -240,10 +240,12 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .ad-hoc-fields { display:grid; gap:14px; border:0; padding:0; min-width:0; }
 .ad-hoc-fields label { display:grid; gap:6px; }
 .ad-hoc-fields textarea { min-height:80px; padding:9px; border:1px solid #d8e1e2; border-radius:9px; font:inherit; }
-.ad-hoc-suggestions { display:grid; gap:6px; max-height:240px; overflow:auto; }
-.ad-hoc-suggestions button { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px; border:1px solid #d8e1e2; border-radius:9px; background:var(--card); text-align:left; cursor:pointer; }
-.ad-hoc-suggestions button:hover { border-color:var(--primary); }
-.ad-hoc-suggestions button > span:first-child { display:grid; gap:3px; }
+.ad-hoc-name { position:relative; }
+.ad-hoc-suggestions { position:absolute; top:100%; left:0; right:0; z-index:2; margin-top:4px; max-height:200px; overflow:auto; border:1px solid #d8e1e2; border-radius:9px; background:var(--card); box-shadow:0 6px 18px #17252b22; }
+.ad-hoc-suggestions button { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:9px 10px; border:0; background:transparent; color:inherit; font:inherit; font-weight:400; text-align:left; cursor:pointer; }
+.ad-hoc-suggestions button:hover, .ad-hoc-suggestions button:focus-visible { background:var(--muted); }
+.ad-hoc-suggestions button > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ad-hoc-suggestions button > span:last-child { flex:none; white-space:nowrap; }
 .item-discount-form { margin:10px 0; }
 .item-discount-form fieldset { display:grid; gap:8px; border:0; padding:0; min-width:0; }
 .item-discount-form legend { font-size:12px; margin-bottom:8px; }
@@ -446,6 +448,10 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .receipt-line small { display: block; color: #728086; }
 .receipt-line.grand { border-top: 1px solid #e0e8e8; font-size: 18px; font-weight: 800; }
 .print-receipt { display: none; }
+.print-receipt .receipt-line { padding:4px 0; }
+.receipt-item { margin:8px 0; break-inside:avoid; }
+.receipt-item-price { display:flex; justify-content:space-between; gap:12px; }
+.receipt-item-discount { text-align:right; }
 @media (max-width: 650px) { .create-store, .invite-form { align-items: stretch; flex-direction: column; } }
 @media print {
   @page { size: 80mm auto; margin: 4mm; }
@@ -453,7 +459,7 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
   [data-slot="sidebar-wrapper"] > :not(.print-receipt) { display: none !important; }
   .print-receipt { display: block; width: 72mm; color: black; font: 12px Arial, sans-serif; }
   .print-receipt h1 { text-align: center; font-size: 18px; }
-  .print-receipt p { text-align: center; }
+  .print-receipt p { text-align: center; margin:5px 0; }
   .print-receipt hr { border: 0; border-top: 1px dashed black; margin: 10px 0; }
 }
 /* Store finances and reports. */
