@@ -29,6 +29,8 @@ function Snapshot({ label, sale }) {
         </p>
       ))}
       <p>
+        {sale.payment_method_note && <>{t("payment_method_receipt")}: {t(`payment_method_${sale.payment_method_note}`)}<br /></>}
+        {sale.discount_total > 0 && <>{t("discount")}: −{money(sale.discount_total)}<br /></>}
         {t("tax")}{" "}
         {sale.tax_applied ? sale.tax_percentage + "%" : t("excluded")}
       </p>

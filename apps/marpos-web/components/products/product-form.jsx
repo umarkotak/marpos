@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 const newProduct = () => ({
   name: "",
+  description: "",
   sku: "",
   category: "lainnya",
   price: "",
@@ -198,6 +199,10 @@ export function ProductForm({
           <p>{t("add_a_clear_name_sku_category_and_price")}</p>
         </div>
         <div className="settings-fields product-fields">
+          <label>
+            {t("description_optional")}
+            <textarea maxLength={2000} value={form.description || ""} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+          </label>
           <label>
             {t("product_name")}
             <input

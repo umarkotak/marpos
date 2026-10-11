@@ -93,7 +93,7 @@ func Correct(c fiber.Ctx) error {
 	if err = writeItems(tx, storeID, &sale); err != nil {
 		return render.Failure(c, 400, "invalid_items", err.Error())
 	}
-	if _, err = tx.Exec(`UPDATE sales SET buyer_name=$1,buyer_phone=$2,buyer_email=$3,subtotal=$4,tax_applied=$5,tax_percentage=$6,tax_total=$7,grand_total=$8,revision=revision+1 WHERE id=$9`, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail, sale.Subtotal, sale.TaxApplied, sale.TaxPercentage, sale.TaxTotal, sale.GrandTotal, id); err != nil {
+	if _, err = tx.Exec(`UPDATE sales SET buyer_name=$1,buyer_phone=$2,buyer_email=$3,subtotal=$4,tax_applied=$5,tax_percentage=$6,tax_total=$7,grand_total=$8,discount_total=$10,revision=revision+1 WHERE id=$9`, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail, sale.Subtotal, sale.TaxApplied, sale.TaxPercentage, sale.TaxTotal, sale.GrandTotal, id, sale.DiscountTotal); err != nil {
 		return render.Failure(c, 500, "database_error", "Could not save correction.")
 	}
 	afterJSON, _ := json.Marshal(sale)

@@ -1,6 +1,7 @@
 import { t, message, useI18n } from "@/lib/i18n";
 import { AddonDialog } from "@/components/pos/addon-dialog";
 import { BuyerDialog } from "@/components/pos/buyer-dialog";
+import { AdHocProductDialog } from "@/components/pos/ad-hoc-product-dialog";
 import { SalePreview } from "@/components/pos/sale-preview";
 import { Cart } from "@/components/pos/cart";
 import { Catalog } from "@/components/pos/catalog";
@@ -9,6 +10,7 @@ import { useRegister } from "@/components/register-provider";
 import { buyerError } from "@/components/buyer-fields";
 import { productCategories } from "@/lib/catalog";
 import { useQueryState } from "@/lib/navigation";
+import { priceItem } from "@/lib/sale-items";
 
 export default function PosPage() {
   useI18n();
@@ -16,6 +18,8 @@ export default function PosPage() {
     db,
     auth,
     products,
+    addAdHocProduct,
+    loadCatalog,
     draftOrders,
     checkingOut,
     setCheckingOut,
@@ -30,6 +34,8 @@ export default function PosPage() {
   const { cart, setCart, buyer, setBuyer, taxOn, paymentMethodNote } = draftOrders;
   const [buyerOpen, setBuyerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [adHocOpen, setAdHocOpen] = useState(false);
+  const adHocLock = useRef(false);
   const [buyerDraft, setBuyerDraft] = useState({
     buyer_name: "",
     buyer_phone: "",
@@ -50,6 +56,7 @@ export default function PosPage() {
     productsByCategory.get(category).push(product);
   }
   const subtotal = cart.reduce((sum, item) => sum + item.line_total, 0);
+  const discountTotal = cart.reduce((sum, item) => sum + (item.discount_total || 0), 0);
   const tax =
     taxOn && auth ? Math.round((subtotal * auth.tax_percentage) / 100) : 0;
   const total = subtotal + tax;
@@ -76,9 +83,12 @@ export default function PosPage() {
         id: crypto.randomUUID(),
         product_id: product.id,
         product_name: product.name,
+        product_description: product.description || "",
         sku: product.sku,
         quantity: 1,
         unit_price: product.price,
+        discount_total: 0,
+        discount_per_unit: 0,
         line_total:
           product.price +
           addons.reduce((sum, addon) => sum + addon.price_delta, 0),
@@ -86,6 +96,29 @@ export default function PosPage() {
       },
     ]);
     setSelected(null);
+  }
+  async function createAdHocProduct(input) {
+    if (adHocLock.current || checkingOut || !draftOrders.ready) return;
+    if (!input.name || [...input.name].length > 200 || [...input.description].length > 2000 ||
+      /\p{Cc}/u.test(input.name) || /\p{Cc}/u.test(input.description.replace(/[\n\r\t]/g, "")) ||
+      !Number.isSafeInteger(input.price) || input.price < 0 || input.price > 1e12) {
+      setNotice(message("check_ad_hoc_product"));
+      return;
+    }
+    adHocLock.current = true;
+    setCheckingOut(true);
+    try {
+      const product = await addAdHocProduct(input);
+      addLine(product, []);
+      setAdHocOpen(false);
+      setNotice(message("ad_hoc_product_added"));
+      syncSales(db, auth).then(() => loadCatalog(db, auth)).catch(() => {});
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      adHocLock.current = false;
+      setCheckingOut(false);
+    }
   }
   function chooseProduct(product) {
     if (!draftOrders.ready || checkingOut) return;
@@ -118,20 +151,32 @@ export default function PosPage() {
   }
   function changeQuantity(id, delta) {
     if (checkingOut) return;
-    setCart((old) =>
-      old.map((item) => {
-        if (item.id !== id) return item;
-        const quantity = Math.max(1, Math.min(1000, item.quantity + delta));
-        return {
-          ...item,
-          quantity,
-          line_total:
-            quantity *
-            (item.unit_price +
-              item.addons.reduce((sum, addon) => sum + addon.price_delta, 0)),
-        };
-      }),
-    );
+    const item = cart.find((row) => row.id === id);
+    if (!item) return;
+    const quantity = Math.max(1, Math.min(1000, item.quantity + delta));
+    const next = priceItem({ ...item, quantity });
+    if (next.line_total < 0) {
+      setNotice(message("reduce_discount_before_quantity"));
+      return;
+    }
+    setCart((old) => old.map((row) => row.id === id ? next : row));
+  }
+  function applyDiscount(id, amount, perUnit) {
+    if (checkingOut || !draftOrders.ready) return false;
+    const item = cart.find((row) => row.id === id);
+    if (!item) return false;
+    const next = priceItem({
+      ...item,
+      discount_total: perUnit ? 0 : amount,
+      discount_per_unit: perUnit ? amount : 0,
+    });
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1e12 || next.line_total < 0) {
+      setNotice(message("check_item_discount"));
+      return false;
+    }
+    setCart((old) => old.map((row) => row.id === id ? next : row));
+    setNotice("");
+    return true;
   }
   function openCheckoutPreview() {
     const error = buyerError(buyer);
@@ -175,12 +220,14 @@ export default function PosPage() {
       store_id: auth.store_id,
       register_id: auth.register_id,
       cashier_id: auth.user_id,
+      cashier_name: auth.name,
       receipt_number: `${auth.register_id.slice(0, 8)}-${id}`,
       created_at: now,
       completed_at: now,
       tax_applied: taxOn,
       tax_percentage: auth.tax_percentage,
       subtotal,
+      discount_total: discountTotal,
       tax_total: tax,
       grand_total: total,
       payment_method_note: paymentMethodNote,
@@ -248,6 +295,7 @@ export default function PosPage() {
           </button>
         </div>
         <Catalog
+          openAdHocProduct={() => setAdHocOpen(true)}
           categories={categories}
           productsByCategory={productsByCategory}
           chooseProduct={chooseProduct}
@@ -256,10 +304,12 @@ export default function PosPage() {
           filtered={filtered}
         />
         <Cart
+          discountTotal={discountTotal}
           subtotal={subtotal}
           tax={tax}
           total={total}
           changeQuantity={changeQuantity}
+          applyDiscount={applyDiscount}
           openBuyer={openBuyer}
           openCheckoutPreview={openCheckoutPreview}
           setBuyerOpen={setBuyerOpen}
@@ -267,6 +317,7 @@ export default function PosPage() {
         />
       </div>
       <SalePreview
+        discountTotal={discountTotal}
         previewOpen={previewOpen}
         setPreviewOpen={setPreviewOpen}
         subtotal={subtotal}
@@ -281,6 +332,11 @@ export default function PosPage() {
         setBuyerDraft={setBuyerDraft}
         saveBuyer={saveBuyer}
       />
+      {adHocOpen && <AdHocProductDialog products={products} onClose={() => setAdHocOpen(false)} onAdd={createAdHocProduct} onSelect={(product) => {
+        if (!draftOrders.ready || checkingOut) return;
+        setAdHocOpen(false);
+        chooseProduct(product);
+      }} busy={checkingOut} />}
       <AddonDialog
         selected={selected}
         setSelected={setSelected}

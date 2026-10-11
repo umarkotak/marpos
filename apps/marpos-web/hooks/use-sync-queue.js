@@ -4,6 +4,8 @@ import { api } from "@/lib/api";
 import {
   pendingSales,
   pendingFinance,
+  pendingAdHocProducts,
+  markAdHocProductSynced,
   markSaleSynced,
   markFinanceSynced,
   putMeta,
@@ -24,9 +26,28 @@ export function useSyncQueue({
     try {
       const queued = await pendingSales(localDB);
       const entries = await pendingFinance(localDB);
-      setPending(queued.length + entries.length);
+      const products = await pendingAdHocProducts(localDB);
+      setPending(queued.length + entries.length + products.length);
       let failed = 0;
+      const failedProducts = new Set();
+      for (const product of products) {
+        try {
+          await api(`/stores/${product.store_id}/products/ad-hoc`, {
+            method: "POST", body: product,
+          });
+          await markAdHocProductSynced(localDB, product.id);
+          setPending((count) => count - 1);
+        } catch (error) {
+          if (!error.status || error.status === 401 || error.status >= 500) throw error;
+          failedProducts.add(product.id);
+          failed++;
+        }
+      }
       for (const sale of queued) {
+        if (sale.items.some((item) => failedProducts.has(item.product_id))) {
+          failed++;
+          continue;
+        }
         try {
           const result = await api(`/stores/${sale.store_id}/sales`, {
             method: "POST",

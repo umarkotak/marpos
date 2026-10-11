@@ -47,6 +47,7 @@ type Product struct {
 	SKU            string          `db:"sku" json:"sku"`
 	Barcode        string          `db:"barcode" json:"barcode"`
 	Name           string          `db:"name" json:"name"`
+	Description    string          `db:"description" json:"description"`
 	Category       string          `db:"category" json:"category"`
 	Price          int64           `db:"price" json:"price"`
 	Groups         []Group         `json:"addon_groups"`
@@ -69,14 +70,15 @@ type groupInput struct {
 }
 
 type productInput struct {
-	SKU       string       `json:"sku"`
-	Barcode   string       `json:"barcode"`
-	Name      string       `json:"name"`
-	Category  string       `json:"category"`
-	Price     int64        `json:"price"`
-	Groups    []groupInput `json:"addon_groups"`
-	Costs     []Cost       `json:"cost_breakdown"`
-	ImageURLs []string     `json:"image_urls"`
+	SKU         string       `json:"sku"`
+	Barcode     string       `json:"barcode"`
+	Name        string       `json:"name"`
+	Description *string      `json:"description"`
+	Category    string       `json:"category"`
+	Price       int64        `json:"price"`
+	Groups      []groupInput `json:"addon_groups"`
+	Costs       []Cost       `json:"cost_breakdown"`
+	ImageURLs   []string     `json:"image_urls"`
 }
 
 func List(c fiber.Ctx) error {
@@ -87,7 +89,7 @@ func List(c fiber.Ctx) error {
 	}
 	db := datastore.Get().Db
 	var products []Product
-	err := db.Select(&products, `SELECT p.id, p.sku, COALESCE(p.barcode,'') AS barcode, p.name, p.category, pp.amount AS price,p.cost_breakdown,p.cost_configured,p.image_urls
+	err := db.Select(&products, `SELECT p.id, p.sku, COALESCE(p.barcode,'') AS barcode, p.name, p.description, p.category, pp.amount AS price,p.cost_breakdown,p.cost_configured,p.image_urls
 		FROM products p JOIN product_prices pp ON pp.product_id = p.id AND pp.ends_at IS NULL
 		WHERE p.store_id = $1 AND (p.deleted_at IS NOT NULL) = $2 AND (p.active=true OR $2) ORDER BY p.name`, storeID, trash)
 	if err != nil {
@@ -136,7 +138,7 @@ func Categories(c fiber.Ctx) error {
 	if !auth_handler.StoreAccess(c, storeID, false) {
 		return render.Failure(c, 403, "store_access_denied", "You cannot access this store.")
 	}
-	categories := []string{"makanan", "minuman", "lainnya"}
+	categories := []string{"makanan", "minuman", "lainnya", "ad hoc"}
 	var custom []string
 	if err := datastore.Get().Db.Select(&custom, `SELECT DISTINCT category FROM products
 		WHERE store_id=$1 AND active=true AND deleted_at IS NULL
@@ -156,6 +158,12 @@ func Save(c fiber.Ctx) error {
 		return render.Failure(c, 400, "invalid_request", "Check the product data.")
 	}
 	input.SKU, input.Name, input.Barcode = strings.TrimSpace(input.SKU), strings.TrimSpace(input.Name), strings.TrimSpace(input.Barcode)
+	if input.Description != nil {
+		*input.Description = strings.TrimSpace(*input.Description)
+		if !validDescription(*input.Description) {
+			return render.Failure(c, 400, "invalid_description", "Check the product description.")
+		}
+	}
 	input.Category = strings.ToLower(strings.TrimSpace(input.Category))
 	validCategory := input.Category != "" && utf8.RuneCountInString(input.Category) <= 100
 	for _, char := range input.Category {
@@ -233,7 +241,7 @@ func Save(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	if productID == "" {
 		productID = uuid.NewString()
-		_, err = tx.Exec(`INSERT INTO products (id,store_id,sku,barcode,name,category) VALUES ($1,$2,$3,NULLIF($4,''),$5,$6)`, productID, storeID, input.SKU, input.Barcode, input.Name, input.Category)
+		_, err = tx.Exec(`INSERT INTO products (id,store_id,sku,barcode,name,category,description) VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,COALESCE($7,''))`, productID, storeID, input.SKU, input.Barcode, input.Name, input.Category, input.Description)
 		if err == nil {
 			_, err = tx.Exec(`INSERT INTO product_prices (product_id,amount) VALUES ($1,$2)`, productID, input.Price)
 		}
@@ -248,7 +256,7 @@ func Save(c fiber.Ctx) error {
 			return render.Failure(c, 404, "product_not_found", "Product was not found.")
 		}
 		if err == nil {
-			_, err = tx.Exec(`UPDATE products SET sku=$1,barcode=NULLIF($2,''),name=$3,category=$4,updated_at=now() WHERE id=$5`, input.SKU, input.Barcode, input.Name, input.Category, productID)
+			_, err = tx.Exec(`UPDATE products SET sku=$1,barcode=NULLIF($2,''),name=$3,category=$4,description=COALESCE($6,description),updated_at=now() WHERE id=$5`, input.SKU, input.Barcode, input.Name, input.Category, productID, input.Description)
 		}
 		if err == nil && oldPrice != input.Price {
 			_, err = tx.Exec(`UPDATE product_prices SET ends_at=now() WHERE product_id=$1 AND ends_at IS NULL`, productID)

@@ -67,7 +67,29 @@ export async function replaceProducts(db, storeID, products) {
     .filter((product) => product.store_id === storeID)
     .forEach((product) => store.delete(product.id));
   products.forEach((product) => store.put({ ...product, store_id: storeID }));
+  old.filter((product) => product.store_id === storeID && product.ad_hoc_pending)
+    .forEach((product) => store.put(product));
   await transactionDone(tx);
+}
+
+export async function saveAdHocProduct(db, product) {
+  const tx = db.transaction("products", "readwrite");
+  tx.objectStore("products").put(product);
+  await transactionDone(tx);
+}
+
+export async function pendingAdHocProducts(db) {
+  const products = await requestResult(db.transaction("products").objectStore("products").getAll());
+  return products.filter((product) => product.ad_hoc_pending);
+}
+
+export async function markAdHocProductSynced(db, id) {
+  const tx = db.transaction("products", "readwrite");
+  const done = transactionDone(tx);
+  const store = tx.objectStore("products");
+  const product = await requestResult(store.get(id));
+  if (product) store.put({ ...product, ad_hoc_pending: false });
+  await done;
 }
 
 export async function clearStoreRecords(db, storeID, includeProducts) {

@@ -1,23 +1,28 @@
 import { t, useI18n, formatLocale } from "@/lib/i18n";
 import { money } from "@/lib/reports";
-export function PrintReceipt({ detail, storeName }) {
+export function PrintReceipt({ detail, storeName, storeAddress }) {
   useI18n();
   if (!detail) return null;
   const { sale, items } = detail;
   return (
     <section className="print-receipt">
       <h1>{storeName}</h1>
+      {storeAddress && <p>{storeAddress}</p>}
       <p>
         {sale.reference ||
           t("temporary_receipt_number", { number: sale.receipt_number })}
         <br />
-        {new Date(sale.completed_at).toLocaleString(formatLocale())}
+        {new Date(sale.completed_at).toLocaleString(formatLocale(), {
+          timeZone: "Asia/Jakarta",
+        })} WIB
       </p>
-      <p>
-        {[sale.buyer_name, sale.buyer_phone, sale.buyer_email]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
+      {sale.cashier_name && <p>{t("cashier")}: {sale.cashier_name}</p>}
+      {["buyer_name", "buyer_phone", "buyer_email"].map((key) =>
+        sale[key] ? <p key={key}>{t(key)}: {sale[key]}</p> : null,
+      )}
+      {sale.payment_method_note && (
+        <p>{t("payment_method_receipt")}: {t(`payment_method_${sale.payment_method_note}`)}</p>
+      )}
       {sale.revision > 0 && (
         <p>
           {t("corrected_order_revision")} {sale.revision}
@@ -32,22 +37,39 @@ export function PrintReceipt({ detail, storeName }) {
             </span>
             <span>{money(item.line_total)}</span>
           </div>
+          <small>{item.sku} · {t("unit_price_idr")}: {money(item.unit_price)}<br /></small>
+          {item.product_description && <small>{item.product_description}<br /></small>}
           {item.addons?.map((addon) => (
             <small key={addon.id || addon.option_name}>
               + {addon.option_name}
-              {addon.price_delta ? ` ${money(addon.price_delta)}` : ""}
+              {` ${money(addon.price_delta)}`}
               <br />
             </small>
           ))}
+          {item.discount_total > 0 && (
+            <small>{t("discount")}: −{money(item.discount_total)}{item.discount_per_unit > 0 && ` (${money(item.discount_per_unit)} ${t("per_unit")})`}<br /></small>
+          )}
         </div>
       ))}
       <hr />
+      {sale.discount_total > 0 && (
+        <>
+          <div className="receipt-line">
+            <span>{t("subtotal_before_discount")}</span>
+            <span>{money(sale.subtotal + sale.discount_total)}</span>
+          </div>
+          <div className="receipt-line">
+            <span>{t("discount")}</span>
+            <span>−{money(sale.discount_total)}</span>
+          </div>
+        </>
+      )}
       <div className="receipt-line">
         <span>{t("subtotal")}</span>
         <span>{money(sale.subtotal)}</span>
       </div>
       <div className="receipt-line">
-        <span>{t("tax_label")}</span>
+        <span>{t("tax_label")} {sale.tax_applied ? `(${sale.tax_percentage}%)` : `(${t("excluded")})`}</span>
         <span>{money(sale.tax_total)}</span>
       </div>
       <div className="receipt-line grand">

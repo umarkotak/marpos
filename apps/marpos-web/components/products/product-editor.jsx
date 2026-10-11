@@ -49,6 +49,8 @@ export function ProductEditor() {
         <p>{t("access_restricted_label")}</p>
       ) : productID && !editing ? (
         <p>{t("product_not_found")}</p>
+      ) : editing?.ad_hoc_pending ? (
+        <p>{t("product_waiting_for_sync")}</p>
       ) : (
         <ProductForm
           key={productID || "new"}

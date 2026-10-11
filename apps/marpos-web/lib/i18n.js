@@ -64,7 +64,7 @@ export function translateMessage(value) {
   return messageKeys.has(value) ? t(messageKeys.get(value)) : value;
 }
 export const categoryLabel = (value) =>
-  ({ makanan: t("food"), minuman: t("drinks"), lainnya: t("other") })[value] ||
+  ({ makanan: t("food"), minuman: t("drinks"), lainnya: t("other"), "ad hoc": t("ad_hoc_category") })[value] ||
   value;
 export const roleLabel = (value) =>
   ({

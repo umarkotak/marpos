@@ -3,6 +3,7 @@ import { useState } from "react";
 import { BuyerFields, buyerError, blankBuyer } from "@/components/buyer-fields";
 import { money } from "@/lib/reports";
 import { IdrInput } from "@/components/idr-input";
+import { priceItem } from "@/lib/sale-items";
 export function OrderEditor({ detail, products, onSave, onCancel }) {
   useI18n();
   const [buyer, setBuyer] = useState({
@@ -30,18 +31,16 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const product = products.find((row) => row.id === productID);
-  const lines = items.map((item) => ({
+  const lines = items.map((item) => priceItem({
     ...item,
     quantity: Number(item.quantity),
     unit_price: Number(item.unit_price),
+    discount_total: Number(item.discount_total || 0),
+    discount_per_unit: Number(item.discount_per_unit || 0),
     addons: item.addons.map((addon) => ({
       ...addon,
       price_delta: Number(addon.price_delta),
     })),
-    line_total:
-      Number(item.quantity) *
-      (Number(item.unit_price) +
-        item.addons.reduce((sum, addon) => sum + Number(addon.price_delta), 0)),
   }));
   const subtotal = lines.reduce((sum, item) => sum + item.line_total, 0),
     taxTotal = taxOn ? Math.round((subtotal * Number(tax)) / 100) : 0,
@@ -89,6 +88,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
         id: crypto.randomUUID(),
         product_id: product.id,
         product_name: product.name,
+        product_description: product.description || "",
         sku: product.sku,
         quantity: 1,
         unit_price: product.price,
@@ -121,6 +121,9 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
           row.quantity > 1000 ||
           !Number.isSafeInteger(row.unit_price) ||
           row.unit_price < 0 ||
+          !Number.isSafeInteger(row.discount_total) || row.discount_total < 0 ||
+          !Number.isSafeInteger(row.discount_per_unit) || row.discount_per_unit < 0 ||
+          row.line_total < 0 ||
           row.addons.some(
             (addon) =>
               !Number.isSafeInteger(addon.price_delta) || addon.price_delta < 0,
@@ -142,6 +145,7 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
         tax_applied: taxOn,
         tax_percentage: Number(tax),
         subtotal,
+        discount_total: lines.reduce((sum, item) => sum + item.discount_total, 0),
         tax_total: taxTotal,
         grand_total: total,
         revision: detail.sale.revision || 0,
@@ -189,6 +193,15 @@ export function OrderEditor({ detail, products, onSave, onCancel }) {
                 />
               </label>
             </div>
+            <label>
+              {t(item.discount_per_unit > 0 ? "discount_per_unit_idr" : "discount_idr")}
+              <IdrInput
+                value={item.discount_per_unit || item.discount_total || 0}
+                onValueChange={(value) => patch(item.id, item.discount_per_unit > 0
+                  ? { discount_per_unit: value, discount_total: 0 }
+                  : { discount_total: value, discount_per_unit: 0 })}
+              />
+            </label>
             {item.addons.map((addon, index) => (
               <label key={addon.id || index}>
                 {addon.group_name}: {addon.option_name} {t("price_idr")}

@@ -70,6 +70,7 @@ func newApp() *fiber.App {
 	private.Get("/stores/:store_id/products/categories", product_handler.Categories)
 	private.Post("/stores/:store_id/images", image_handler.Upload)
 	private.Post("/stores/:store_id/products", product_handler.Save)
+	private.Post("/stores/:store_id/products/ad-hoc", product_handler.AdHoc)
 	private.Delete("/stores/:store_id/products", store_handler.ClearProducts)
 	private.Put("/stores/:store_id/products/:product_id", product_handler.Save)
 	private.Delete("/stores/:store_id/products/:product_id", product_handler.Delete)

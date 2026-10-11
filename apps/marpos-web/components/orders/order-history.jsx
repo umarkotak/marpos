@@ -429,11 +429,15 @@ export function OrdersPage({
                         <div className="receipt-line" key={item.id}>
                           <span>
                             {item.quantity} × {item.product_name}
+                            {item.product_description && <small>{item.product_description}</small>}
                             {item.addons?.map((addon) => (
                               <small key={addon.id || addon.option_name}>
                                 + {addon.option_name}
                               </small>
                             ))}
+                            {item.discount_total > 0 && (
+                              <small>{t("discount")}: −{money(item.discount_total)}</small>
+                            )}
                           </span>
                           <strong>{money(item.line_total)}</strong>
                         </div>

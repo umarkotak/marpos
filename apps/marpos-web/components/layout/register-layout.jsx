@@ -167,7 +167,7 @@ export function RegisterLayout({ children }) {
               children
             )}
           </SidebarInset>
-          <PrintReceipt detail={printDetail} storeName={auth.store_name} />
+          <PrintReceipt detail={printDetail} storeName={auth.store_name} storeAddress={auth.address} />
           {notice && (
             <div className="toast" role="status">
               {translateMessage(notice)}

@@ -1,12 +1,16 @@
 import { t, useI18n } from "@/lib/i18n";
-import { Minus, Pencil, Plus, Printer, ShoppingCart, X } from "lucide-react";
+import { Minus, MoreVertical, Pencil, Plus, Printer, ShoppingCart, X } from "lucide-react";
+import { useState } from "react";
+import { IdrInput } from "@/components/idr-input";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
 export function Cart({
+  discountTotal,
   subtotal,
   tax,
   total,
   changeQuantity,
+  applyDiscount,
   openBuyer,
   openCheckoutPreview,
   setBuyerOpen,
@@ -16,6 +20,9 @@ export function Cart({
   const { db, auth, draftOrders, checkingOut, lastReceipt, printReceipt } =
     useRegister();
   const { cart, setCart, buyer, taxOn, setTaxOn } = draftOrders;
+  const [customizing, setCustomizing] = useState(null);
+  const [discount, setDiscount] = useState("");
+  const [perUnit, setPerUnit] = useState(false);
   return (
     <aside className="cart" aria-label={t("current_order_label")}>
       <div className="cart-head">
@@ -125,6 +132,21 @@ export function Cart({
             <div className="cart-item" key={item.id}>
               <div className="item-head">
                 <strong>{item.product_name}</strong>
+                <div className="item-actions">
+                <button
+                  className="icon-button"
+                  aria-label={t("customize_item", { product: item.product_name })}
+                  aria-expanded={customizing === item.id}
+                  aria-controls={`discount-${item.id}`}
+                  disabled={checkingOut}
+                  onClick={() => {
+                    setCustomizing(customizing === item.id ? null : item.id);
+                    setPerUnit(item.discount_per_unit > 0);
+                    setDiscount(String(item.discount_per_unit || item.discount_total || 0));
+                  }}
+                >
+                  <MoreVertical size={16} />
+                </button>
                 <button
                   className="icon-button danger"
                   aria-label={t("remove_product", {
@@ -139,13 +161,48 @@ export function Cart({
                 >
                   <X size={16} />
                 </button>
+                </div>
               </div>
+              {item.product_description && <small>{item.product_description}</small>}
+              {customizing === item.id && (
+                <form
+                  id={`discount-${item.id}`}
+                  className="item-discount-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (applyDiscount(item.id, Number(discount), perUnit)) setCustomizing(null);
+                  }}
+                >
+                  <fieldset disabled={checkingOut}>
+                    <legend>{t("discount_idr")}</legend>
+                    <div className="payment-method-options item-discount-mode">
+                      {[false, true].map((unit) => (
+                        <label key={String(unit)}>
+                          <input type="radio" name={`discount-mode-${item.id}`} checked={perUnit === unit} onChange={() => setPerUnit(unit)} />
+                          {t(unit ? "discount_per_unit" : "discount_whole_line")}
+                        </label>
+                      ))}
+                    </div>
+                    <IdrInput
+                      aria-label={t("discount_idr")}
+                      value={discount}
+                      max={(item.line_total + (item.discount_total || 0)) / (perUnit ? item.quantity : 1)}
+                      onValueChange={setDiscount}
+                      autoFocus
+                    />
+                    <button className="button secondary">{t("apply_discount")}</button>
+                  </fieldset>
+                </form>
+              )}
               {item.addons.map((addon) => (
                 <small key={addon.id}>
                   + {addon.option_name}
                   {addon.price_delta ? ` (${money(addon.price_delta)})` : ""}
                 </small>
               ))}
+              {item.discount_total > 0 && (
+                <small>{t("discount")}: −{money(item.discount_total)}{item.discount_per_unit > 0 && ` (${money(item.discount_per_unit)} ${t("per_unit")})`}</small>
+              )}
               <div className="item-foot">
                 <div className="quantity">
                   <button
@@ -175,6 +232,10 @@ export function Cart({
         )}
       </div>
       <div className="totals">
+        {discountTotal > 0 && <>
+          <div><span>{t("subtotal_before_discount")}</span><strong>{money(subtotal + discountTotal)}</strong></div>
+          <div><span>{t("discount")}</span><strong>−{money(discountTotal)}</strong></div>
+        </>}
         <div>
           <span>{t("subtotal")}</span>
           <strong>{money(subtotal)}</strong>

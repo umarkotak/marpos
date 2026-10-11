@@ -22,6 +22,7 @@ type HistorySale struct {
 	ReceiptNumber     string     `db:"receipt_number" json:"receipt_number"`
 	CashierName       string     `db:"cashier_name" json:"cashier_name"`
 	Subtotal          int64      `db:"subtotal" json:"subtotal"`
+	DiscountTotal     int64      `db:"discount_total" json:"discount_total"`
 	TaxApplied        bool       `db:"tax_applied" json:"tax_applied"`
 	TaxPercentage     float64    `db:"tax_percentage" json:"tax_percentage"`
 	TaxTotal          int64      `db:"tax_total" json:"tax_total"`
@@ -46,7 +47,7 @@ func History(c fiber.Ctx) error {
 		return render.Failure(c, 400, "invalid_offset", "Check the order page.")
 	}
 	items := []HistorySale{}
-	err = datastore.Get().Db.Select(&items, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note
+	err = datastore.Get().Db.Select(&items, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note,s.discount_total
         FROM sales s JOIN users u ON u.id=s.cashier_id WHERE s.store_id=$1 AND (s.deleted_at IS NOT NULL)=$2
         ORDER BY s.completed_at DESC,s.id DESC LIMIT $3 OFFSET $4`, storeID, trash, limit, offset)
 	if err != nil {
@@ -64,26 +65,29 @@ func Detail(c fiber.Ctx) error {
 		return render.Failure(c, 400, "invalid_order", "Order ID is invalid.")
 	}
 	var sale HistorySale
-	err := datastore.Get().Db.Get(&sale, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note
+	err := datastore.Get().Db.Get(&sale, `SELECT s.id,s.order_number,s.reference,s.receipt_number,u.name AS cashier_name,s.subtotal,s.tax_applied,s.tax_percentage,s.tax_total,s.grand_total,s.completed_at,s.deleted_at,s.buyer_name,s.buyer_phone,s.buyer_email,s.revision,s.payment_method_note,s.discount_total
         FROM sales s JOIN users u ON u.id=s.cashier_id WHERE s.store_id=$1 AND s.id=$2 AND (s.deleted_at IS NULL OR $3)`, storeID, saleID, auth_handler.IsSuperadmin(c))
 	if err != nil {
 		return render.Failure(c, 404, "order_not_found", "Order was not found.")
 	}
 	type Item struct {
-		ID             string         `db:"id" json:"id"`
-		ProductID      string         `db:"product_id" json:"product_id"`
-		ProductName    string         `db:"product_name" json:"product_name"`
-		SKU            string         `db:"sku" json:"sku"`
-		Quantity       float64        `db:"quantity" json:"quantity"`
-		UnitPrice      int64          `db:"unit_price" json:"unit_price"`
-		LineTotal      int64          `db:"line_total" json:"line_total"`
-		UnitCost       int64          `db:"unit_cost" json:"unit_cost"`
-		CostConfigured bool           `db:"cost_configured" json:"cost_configured"`
-		Costs          types.JSONText `db:"cost_breakdown" json:"cost_breakdown"`
-		Addons         []addonInput   `json:"addons"`
+		ID                 string         `db:"id" json:"id"`
+		ProductID          string         `db:"product_id" json:"product_id"`
+		ProductDescription string         `db:"product_description" json:"product_description"`
+		ProductName        string         `db:"product_name" json:"product_name"`
+		SKU                string         `db:"sku" json:"sku"`
+		Quantity           float64        `db:"quantity" json:"quantity"`
+		UnitPrice          int64          `db:"unit_price" json:"unit_price"`
+		DiscountTotal      int64          `db:"discount_total" json:"discount_total"`
+		DiscountPerUnit    int64          `db:"discount_per_unit" json:"discount_per_unit"`
+		LineTotal          int64          `db:"line_total" json:"line_total"`
+		UnitCost           int64          `db:"unit_cost" json:"unit_cost"`
+		CostConfigured     bool           `db:"cost_configured" json:"cost_configured"`
+		Costs              types.JSONText `db:"cost_breakdown" json:"cost_breakdown"`
+		Addons             []addonInput   `json:"addons"`
 	}
 	items := []Item{}
-	err = datastore.Get().Db.Select(&items, `SELECT id,product_id,product_name,sku,quantity,unit_price,line_total,unit_cost,cost_configured,cost_breakdown FROM sale_items WHERE sale_id=$1 ORDER BY created_at,id`, saleID)
+	err = datastore.Get().Db.Select(&items, `SELECT id,product_id,product_name,sku,quantity,unit_price,line_total,unit_cost,cost_configured,cost_breakdown,discount_total,discount_per_unit,product_description FROM sale_items WHERE sale_id=$1 ORDER BY created_at,id`, saleID)
 	if err != nil {
 		return render.Failure(c, 500, "database_error", "Could not load order.")
 	}

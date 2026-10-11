@@ -236,6 +236,18 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .cart-item { padding: 15px 0; border-bottom: 1px solid #edf1f0; }
 .item-head, .item-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .item-head strong { font-size: 14px; }
+.item-actions { display:flex; flex:none; gap:4px; }
+.ad-hoc-fields { display:grid; gap:14px; border:0; padding:0; min-width:0; }
+.ad-hoc-fields label { display:grid; gap:6px; }
+.ad-hoc-fields textarea { min-height:80px; padding:9px; border:1px solid #d8e1e2; border-radius:9px; font:inherit; }
+.ad-hoc-suggestions { display:grid; gap:6px; max-height:240px; overflow:auto; }
+.ad-hoc-suggestions button { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px; border:1px solid #d8e1e2; border-radius:9px; background:var(--card); text-align:left; cursor:pointer; }
+.ad-hoc-suggestions button:hover { border-color:var(--primary); }
+.ad-hoc-suggestions button > span:first-child { display:grid; gap:3px; }
+.item-discount-form { margin:10px 0; }
+.item-discount-form fieldset { display:grid; gap:8px; border:0; padding:0; min-width:0; }
+.item-discount-form legend { font-size:12px; margin-bottom:8px; }
+.payment-method-options.item-discount-mode { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .cart-item small { display: block; color: #7b8e90; font-size: 12px; margin: 3px 0; }
 .item-foot { margin-top: 12px; }
 .item-foot strong { color: #0c7958; font-size: 14px; }

@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -34,17 +36,20 @@ type costInput struct {
 }
 
 type itemInput struct {
-	ID             string       `db:"id" json:"id"`
-	ProductID      string       `db:"product_id" json:"product_id"`
-	ProductName    string       `db:"product_name" json:"product_name"`
-	SKU            string       `db:"sku" json:"sku"`
-	Quantity       int64        `db:"quantity" json:"quantity"`
-	UnitPrice      int64        `db:"unit_price" json:"unit_price"`
-	LineTotal      int64        `db:"line_total" json:"line_total"`
-	Addons         []addonInput `db:"addons" json:"addons"`
-	UnitCost       int64        `db:"unit_cost" json:"unit_cost"`
-	CostConfigured bool         `db:"cost_configured" json:"cost_configured"`
-	Costs          []costInput  `db:"cost_breakdown" json:"cost_breakdown"`
+	ID                 string       `db:"id" json:"id"`
+	ProductID          string       `db:"product_id" json:"product_id"`
+	ProductName        string       `db:"product_name" json:"product_name"`
+	ProductDescription string       `db:"product_description" json:"product_description"`
+	SKU                string       `db:"sku" json:"sku"`
+	Quantity           int64        `db:"quantity" json:"quantity"`
+	UnitPrice          int64        `db:"unit_price" json:"unit_price"`
+	DiscountTotal      int64        `db:"discount_total" json:"discount_total"`
+	DiscountPerUnit    int64        `db:"discount_per_unit" json:"discount_per_unit"`
+	LineTotal          int64        `db:"line_total" json:"line_total"`
+	Addons             []addonInput `db:"addons" json:"addons"`
+	UnitCost           int64        `db:"unit_cost" json:"unit_cost"`
+	CostConfigured     bool         `db:"cost_configured" json:"cost_configured"`
+	Costs              []costInput  `db:"cost_breakdown" json:"cost_breakdown"`
 }
 
 type saleInput struct {
@@ -60,6 +65,7 @@ type saleInput struct {
 	TaxApplied        bool        `db:"tax_applied" json:"tax_applied"`
 	TaxPercentage     float64     `db:"tax_percentage" json:"tax_percentage"`
 	Subtotal          int64       `db:"subtotal" json:"subtotal"`
+	DiscountTotal     int64       `db:"discount_total" json:"discount_total"`
 	TaxTotal          int64       `db:"tax_total" json:"tax_total"`
 	GrandTotal        int64       `db:"grand_total" json:"grand_total"`
 	PaymentMethodNote string      `db:"payment_method_note" json:"payment_method_note"`
@@ -126,8 +132,8 @@ func Sync(c fiber.Ctx) error {
 		return render.Failure(c, 500, "database_error", "Could not assign an order number.")
 	}
 	reference := fmt.Sprintf("MP-%d-%05d", orderYear, orderNumber)
-	_, err = tx.Exec(`INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_year,order_number,reference,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email,payment_method_note)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderYear, orderNumber, reference, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail, sale.PaymentMethodNote)
+	_, err = tx.Exec(`INSERT INTO sales (id,store_id,register_id,cashier_id,receipt_number,order_year,order_number,reference,subtotal,tax_applied,tax_percentage,tax_total,grand_total,created_at,completed_at,buyer_name,buyer_phone,buyer_email,payment_method_note,discount_total)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`, sale.ID, storeID, sale.RegisterID, sale.CashierID, sale.ReceiptNumber, orderYear, orderNumber, reference, subtotal, sale.TaxApplied, sale.TaxPercentage, tax, sale.GrandTotal, sale.CreatedAt, sale.CompletedAt, sale.BuyerName, sale.BuyerPhone, sale.BuyerEmail, sale.PaymentMethodNote, sale.DiscountTotal)
 	if err != nil {
 		return render.Failure(c, 409, "sale_conflict", "Sale ID or receipt number is already in use.")
 	}
@@ -169,8 +175,16 @@ func validateSale(sale *saleInput) error {
 	if math.IsNaN(sale.TaxPercentage) || sale.TaxPercentage < 0 || sale.TaxPercentage > 100 || math.Abs(math.Round(sale.TaxPercentage*100)-sale.TaxPercentage*100) > 0.000001 {
 		return errors.New("Tax percentage is invalid.")
 	}
-	var subtotal, productionCost int64
+	var subtotal, productionCost, discounts int64
 	for _, item := range sale.Items {
+		if utf8.RuneCountInString(item.ProductDescription) > 2000 {
+			return errors.New("Check the product description.")
+		}
+		for _, char := range item.ProductDescription {
+			if unicode.IsControl(char) && char != '\n' && char != '\r' && char != '\t' {
+				return errors.New("Check the product description.")
+			}
+		}
 		if _, err := uuid.Parse(item.ID); err != nil {
 			return errors.New("Sale item ID is invalid.")
 		}
@@ -213,17 +227,29 @@ func validateSale(sale *saleInput) error {
 			seen[addon.OptionID] = true
 			unit += addon.PriceDelta
 		}
-		line := unit * item.Quantity
-		if unit > maxSale/item.Quantity || line != item.LineTotal || line > maxSale || subtotal > maxSale-line {
+		if unit > maxSale/item.Quantity {
+			return errors.New("Sale total does not match its items.")
+		}
+		gross := unit * item.Quantity
+		if item.DiscountTotal < 0 || item.DiscountTotal > gross || item.DiscountPerUnit < 0 || item.DiscountPerUnit > unit ||
+			(item.DiscountPerUnit > 0 && item.DiscountTotal != item.DiscountPerUnit*item.Quantity) || discounts > maxSale-item.DiscountTotal {
+			return errors.New("Check the item discount.")
+		}
+		line := gross - item.DiscountTotal
+		if line != item.LineTotal || subtotal > maxSale-line {
 			return errors.New("Sale total does not match its items.")
 		}
 		subtotal += line
+		discounts += item.DiscountTotal
 	}
 	taxBasisPoints := int64(math.Round(sale.TaxPercentage * 100))
 	if !sale.TaxApplied {
 		taxBasisPoints = 0
 	}
 	tax := (subtotal*taxBasisPoints + 5000) / 10000
+	if sale.DiscountTotal != discounts {
+		return errors.New("Check the item discount.")
+	}
 	if sale.Subtotal != subtotal || sale.TaxTotal != tax || sale.GrandTotal != subtotal+tax {
 		return errors.New("Sale total does not match its tax.")
 	}
@@ -237,8 +263,8 @@ func writeItems(tx *sqlx.Tx, storeID string, sale *saleInput) error {
 			item.Costs = []costInput{}
 		}
 		costs, _ := json.Marshal(item.Costs)
-		_, err = tx.Exec(`INSERT INTO sale_items (id,store_id,sale_id,product_id,product_name,sku,quantity,unit_price,line_total,unit_cost,cost_configured,cost_breakdown)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, item.ID, storeID, sale.ID, item.ProductID, item.ProductName, item.SKU, item.Quantity, item.UnitPrice, item.LineTotal, item.UnitCost, item.CostConfigured, string(costs))
+		_, err = tx.Exec(`INSERT INTO sale_items (id,store_id,sale_id,product_id,product_name,sku,quantity,unit_price,line_total,unit_cost,cost_configured,cost_breakdown,discount_total,discount_per_unit,product_description)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, item.ID, storeID, sale.ID, item.ProductID, item.ProductName, item.SKU, item.Quantity, item.UnitPrice, item.LineTotal, item.UnitCost, item.CostConfigured, string(costs), item.DiscountTotal, item.DiscountPerUnit, item.ProductDescription)
 		if err != nil {
 			return errors.New("Sale item is invalid.")
 		}

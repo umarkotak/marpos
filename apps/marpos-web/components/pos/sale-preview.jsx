@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
 export function SalePreview({
+  discountTotal,
   previewOpen,
   setPreviewOpen,
   subtotal,
@@ -80,6 +81,7 @@ export function SalePreview({
               <div className="sale-preview-item" key={item.id}>
                 <div>
                   <strong>{item.product_name}</strong>
+                  {item.product_description && <small>{item.product_description}</small>}
                   <small>
                     {item.quantity} × {money(item.unit_price)}
                   </small>
@@ -93,12 +95,19 @@ export function SalePreview({
                         : " · Free"}
                     </small>
                   ))}
+                  {item.discount_total > 0 && (
+                    <small>{t("discount")}: −{money(item.discount_total)}</small>
+                  )}
                 </div>
                 <strong>{money(item.line_total)}</strong>
               </div>
             ))}
           </div>
           <div className="sale-preview-footer">
+            {discountTotal > 0 && <>
+              <div><span>{t("subtotal_before_discount")}</span><strong>{money(subtotal + discountTotal)}</strong></div>
+              <div><span>{t("discount")}</span><strong>−{money(discountTotal)}</strong></div>
+            </>}
             <div>
               <span>{t("subtotal")}</span>
               <strong>{money(subtotal)}</strong>

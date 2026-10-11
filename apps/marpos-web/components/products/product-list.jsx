@@ -192,6 +192,7 @@ export function ProductList() {
             )}
             <div>
               <strong>{product.name}</strong>
+              {product.ad_hoc_pending && <small>{t("pending_sync")}</small>}
               <small>
                 {categoryLabel(product.category || "lainnya")} · {product.sku} ·{" "}
                 {t("product_assets", {

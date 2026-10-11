@@ -1,4 +1,4 @@
-export const defaultCategories = ["makanan", "minuman", "lainnya"];
+export const defaultCategories = ["makanan", "minuman", "lainnya", "ad hoc"];
 
 export function productCategories(products) {
   const custom = [

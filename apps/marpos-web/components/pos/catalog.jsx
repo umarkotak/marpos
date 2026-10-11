@@ -1,5 +1,5 @@
 import { t, useI18n, categoryLabel } from "@/lib/i18n";
-import { Package } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 import { money } from "@/lib/reports";
 import { useRegister } from "@/components/register-provider";
 export function Catalog({
@@ -9,6 +9,7 @@ export function Catalog({
   search,
   setSearch,
   filtered,
+  openAdHocProduct,
 }) {
   useI18n();
   const { products, draftOrders, checkingOut } = useRegister();
@@ -19,6 +20,9 @@ export function Catalog({
         <h1>{t("point_of_sale")}</h1>
         <p>{t("choose_products_to_start_a_sale")}</p>
       </div>
+      <button className="button secondary" disabled={!draftOrders.ready || checkingOut} onClick={openAdHocProduct}>
+        <Plus size={16} /> {t("add_ad_hoc_product")}
+      </button>
       <label className="search">
         {t("search_products")}
         <input
@@ -72,7 +76,7 @@ export function Catalog({
           <p>
             {products.length
               ? t("try_another_name_or_sku")
-              : t("ask_a_manager_to_add_products_before_checkout")}
+              : t("add_an_ad_hoc_product_to_start")}
           </p>
         </div>
       )}

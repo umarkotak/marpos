@@ -21,6 +21,8 @@ import {
   putMeta,
   replaceProducts,
   pendingFinance,
+  pendingAdHocProducts,
+  saveAdHocProduct,
 } from "@/lib/local-db";
 
 const RegisterContext = createContext(null);
@@ -63,7 +65,7 @@ export function RegisterProvider({ children }) {
   const loadCatalog = useCallback(async (localDB, session) => {
     const catalog = await api(`/stores/${session.store_id}/products`);
     await replaceProducts(localDB, session.store_id, catalog);
-    setProducts(catalog);
+    setProducts(await getProducts(localDB, session.store_id));
     setOnline(true);
   }, []);
 
@@ -155,6 +157,7 @@ export function RegisterProvider({ children }) {
             setProducts(await getProducts(localDB, cached.store_id));
           setPending(
             (await pendingSales(localDB)).length +
+              (await pendingAdHocProducts(localDB)).length +
               (await pendingFinance(localDB)).length,
           );
           try {
@@ -317,6 +320,20 @@ export function RegisterProvider({ children }) {
       setNotice(error.message);
     }
   }
+  async function addAdHocProduct(input) {
+    if (!db || !auth?.store_id || auth.role === "viewer") throw new Error(t("access_restricted"));
+    if (new Date(auth.offline_expires_at) <= new Date()) throw new Error(t("sign_in_online_again_before_you_record_an_entry"));
+    const id = crypto.randomUUID();
+    const product = {
+      ...input, id, store_id: auth.store_id, sku: `ADHOC-${id}`,
+      category: "ad hoc", addon_groups: [], image_urls: [],
+      cost_breakdown: [], cost_configured: false, ad_hoc_pending: true,
+    };
+    await saveAdHocProduct(db, product);
+    setProducts((old) => [...old, product]);
+    setPending((count) => count + 1);
+    return product;
+  }
   async function clearStore(kind) {
     if (
       clearingStore.current ||
@@ -384,7 +401,7 @@ export function RegisterProvider({ children }) {
     }
   }
   async function selectStore(store) {
-    if (draftOrders.saving) {
+    if (draftOrders.saving || checkingOut) {
       setNotice(message("wait_for_the_draft_to_save_before_you_switch_stores"));
       return;
     }
@@ -454,6 +471,7 @@ export function RegisterProvider({ children }) {
         setCheckingOut,
         draftOrders,
         loadCatalog,
+        addAdHocProduct,
         syncSales,
         saveSettings,
         clearStore,
