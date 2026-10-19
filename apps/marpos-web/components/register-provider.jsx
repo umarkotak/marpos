@@ -12,6 +12,8 @@ import { navigate, pagePaths, useLocation } from "@/lib/navigation";
 import { useOfflineShell } from "@/hooks/use-offline-shell";
 import { useSyncQueue } from "@/hooks/use-sync-queue";
 import { useOrderDrafts } from "@/hooks/use-order-drafts";
+import { usePrinter } from "@/hooks/use-printer";
+import { receiptText, rawBTIntent } from "@/lib/receipt-text";
 import {
   clearStoreRecords,
   getMeta,
@@ -48,6 +50,7 @@ export function RegisterProvider({ children }) {
   const [pending, setPending] = useState(0);
   const [online, setOnline] = useState(false);
   const [notice, setNotice] = useState("");
+  const { printerSettings, printerReady, savePrinterSettings } = usePrinter(db, auth?.store_id, setNotice);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 10_000);
@@ -430,6 +433,23 @@ export function RegisterProvider({ children }) {
     }
   }
   function printReceipt(detail) {
+    if (!printerReady) {
+      setNotice(message("printer_settings_not_ready"));
+      return;
+    }
+    if (printerSettings.method === "rawbt") {
+      if (!/Android/i.test(navigator.userAgent)) {
+        setNotice(message("bluetooth_print_requires_android"));
+        return;
+      }
+      try {
+        window.location.href = rawBTIntent(receiptText(detail, auth, printerSettings.paperWidth));
+        setNotice(message("receipt_sent_to_rawbt"));
+      } catch {
+        setNotice(message("printer_launch_failed"));
+      }
+      return;
+    }
     setPrintDetail(detail);
     requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   }
@@ -457,6 +477,9 @@ export function RegisterProvider({ children }) {
         setTab,
         printDetail,
         printReceipt,
+        printerSettings,
+        printerReady,
+        savePrinterSettings,
         lastReceipt,
         setLastReceipt,
         pending,

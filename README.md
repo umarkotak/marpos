@@ -8,6 +8,7 @@ The app can save sales when the internet or API is unavailable. The first Google
 
 - `apps/api`: Go API and PostgreSQL migrations.
 - `apps/marpos-web`: Next.js web app. It stores the product catalog and pending sales in the browser.
+- `apps/marpos-mobile`: Native Android app in Kotlin. See its [setup guide](apps/marpos-mobile/README.md).
 - `justfile`: Commands for the database and API. Run these commands from the project root.
 - `offline_first_pos_architecture.md`: Initial architecture notes.
 
@@ -68,6 +69,18 @@ On the server, check out this repository at `/Users/umar/umar/personal_project/m
 Open `http://localhost:6031` and sign in with Google. Create a store on your first sign-in. Each store has one register. Set the store name and tax rate in **Store settings**. Invite other users from **Team** after they have signed in to Marpos once. Invitations appear in **Manage stores**. Users can accept or reject them there. A rejected invitation can be sent again. Create a product on the **Products** page, then use **Point of sale** to complete a cash sale. **Order history** shows sales and can print a receipt through the browser print dialog. Each synced sale has a reference in the form `MP-{year}-00001` with at least five digits. The number resets each year for each store. The year uses the sale completion date in WIB. Existing references stay unchanged. Offline sales show a temporary receipt ID until they sync. Apply migration `000008` with `just migrate-up` before you restart the API.
 
 The store owner can invite and remove users. An admin can manage managers and cashiers. Managers can change products and store settings. Cashiers can complete sales. Owners, store admins, and superadmins can soft-delete orders. Only superadmins can restore deleted records. Deleted products and orders stay in the database and do not appear in the normal catalog or order history.
+
+## Android app
+
+The native Kotlin app is in `apps/marpos-mobile`. It connects directly to the Go API and keeps its own SQLite catalog, drafts, sales, and sync queue. Open that directory in Android Studio. See the [Android setup guide](apps/marpos-mobile/README.md) for Google OAuth setup, server configuration, offline use, and printing. The Android app does not import pending sales from the web browser.
+
+## Receipt printer
+
+In **Store settings → Receipt printer**, select **58 mm** (the default) or **80 mm**. Use **Save printer settings** to save the print method and paper width. These settings apply to this store in this browser on this device only. They save offline and stay after reload. Clearing browser site data also clears printer settings. **Print test receipt** prints a sample without creating a sale.
+
+For an Android Bluetooth printer, install [RawBT](https://play.google.com/store/apps/details?id=ru.a402d.rawbtprinter). Pair the printer in Android settings, then select it in RawBT. Set the same paper width in RawBT and use a monospace font with 32 columns for 58 mm or 48 columns for 80 mm. Select **Android Bluetooth (RawBT)** in Marpos and save. Print from Android Chrome or its installed web app. Receipts go directly to RawBT on the tablet, including during offline use. If RawBT is missing, Chrome opens its install page; install and configure it, then print again. RawBT handles Bluetooth permissions and the printer connection. Marpos cannot confirm that paper was printed, so check the printer before retrying. RawBT's unlicensed version can add a notice to the printout.
+
+The default method is **Browser print dialog**. Its receipt layout uses the selected width; select the same paper size in the print dialog or printer driver. Bluetooth printer support depends on the printer's compatibility with RawBT. The integration uses RawBT's [text URI protocol](https://github.com/402d/DemoRawBtPrinter/blob/master/app/src/main/java/ru/a402d/demorawbt/MainActivity.java) and Chrome's [Android intents](https://developer.chrome.com/docs/android/intents).
 
 ## Offline use
 

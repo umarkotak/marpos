@@ -33,6 +33,7 @@ export function RegisterLayout({ children }) {
     createStore,
     decideInvitation,
     printDetail,
+    printerSettings,
   } = useRegister();
   const productID = /^\/products\/[^/]+\/edit$/.test(pathname);
   const productTrash = pathname === "/products/deleted";
@@ -167,7 +168,7 @@ export function RegisterLayout({ children }) {
               children
             )}
           </SidebarInset>
-          <PrintReceipt detail={printDetail} storeName={auth.store_name} storeAddress={auth.address} />
+          <PrintReceipt detail={printDetail} storeName={auth.store_name} storeAddress={auth.address} paperWidth={printerSettings.paperWidth} />
           {notice && (
             <div className="toast" role="status">
               {translateMessage(notice)}

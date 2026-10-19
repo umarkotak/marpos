@@ -1,11 +1,11 @@
 import { t, useI18n, formatLocale } from "@/lib/i18n";
 import { money } from "@/lib/reports";
-export function PrintReceipt({ detail, storeName, storeAddress }) {
+export function PrintReceipt({ detail, storeName, storeAddress, paperWidth = 58 }) {
   useI18n();
   if (!detail) return null;
   const { sale, items } = detail;
   return (
-    <section className="print-receipt">
+    <section className="print-receipt" data-paper-width={paperWidth}>
       <h1>{storeName}</h1>
       {storeAddress && <p>{storeAddress}</p>}
       <p>

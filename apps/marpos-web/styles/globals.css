@@ -454,10 +454,11 @@ input:not([type=checkbox]):not([type=radio]), select { width: 100%; min-height: 
 .receipt-item-discount { text-align:right; }
 @media (max-width: 650px) { .create-store, .invite-form { align-items: stretch; flex-direction: column; } }
 @media print {
-  @page { size: 80mm auto; margin: 4mm; }
+  @page { size: auto; margin: 4mm; }
   body { background: white; }
   [data-slot="sidebar-wrapper"] > :not(.print-receipt) { display: none !important; }
-  .print-receipt { display: block; width: 72mm; color: black; font: 12px Arial, sans-serif; }
+  .print-receipt { display: block; width: 50mm; max-width: 100%; color: black; font: 12px Arial, sans-serif; }
+  .print-receipt[data-paper-width="80"] { width: 72mm; }
   .print-receipt h1 { text-align: center; font-size: 18px; }
   .print-receipt p { text-align: center; margin:5px 0; }
   .print-receipt hr { border: 0; border-top: 1px dashed black; margin: 10px 0; }

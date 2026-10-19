@@ -1,5 +1,6 @@
 import { t, useI18n } from "@/lib/i18n";
 import { useEffect, useState } from "react";
+import { PrinterSettings } from "@/components/settings/printer-settings";
 export function StoreSettings({
   auth,
   onSave,
@@ -210,6 +211,7 @@ export function StoreSettings({
           </label>
         </div>
       </section>
+      <PrinterSettings />
       {dangerZoneEnabled && (auth.role === "owner" || auth.is_superadmin) && (
         <section
           className="settings-section danger-zone"
