@@ -5,22 +5,22 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 fun MainActivity.ordersScreen(trash: Boolean=false,offset: Int=0) {
-    heading(body,if(trash) "Deleted orders" else "Order history")
+    pageHeading(body,"Sales",if(trash) "Deleted orders" else "Order history","View your completed sales and pending orders.")
     if(repo.superadmin) button(body,if(trash) "Active orders" else "Deleted orders") { body.removeAllViews(); ordersScreen(!trash) }
     val list=column(body)
     cachedList(repo.path("sales?trash=$trash&offset=$offset"),list) { remote ->
         val local=if(trash) emptyList() else repo.db.records("sale",repo.store).filter { it.optString("sync_status")=="pending" || (!repo.online && remote.none { r -> r.getString("id")==it.getString("id") }) }
-        (remote+local).distinctBy { it.getString("id") }.sortedByDescending { it.optString("completed_at") }.forEach { sale ->
-            val c=card(list)
-            text(c,sale.optString("reference").ifBlank { sale.optString("receipt_number",tr("Pending sync")) },17f,true)
-            text(c,"${sale.optString("buyer_name")} · ${money(sale.getLong("grand_total"))}")
-            text(c,displayTime(sale.optString("completed_at")),13f)
-            if(sale.optString("sync_status")=="pending") text(c,"Pending sync",13f)
-            button(c,"View") {
-                if(sale.optString("sync_status")=="pending") orderDetail(obj("sale" to sale,"items" to sale.getJSONArray("items")))
+        val sales=(remote+local).distinctBy { it.getString("id") }.sortedByDescending { it.optString("completed_at") }
+        val table=table(list,listOf("Reference","Buyer","Date","Cashier","Total","Actions"),listOf(180,150,190,100,140,90))
+        sales.forEach { sale ->
+            val pending=sale.optString("sync_status")=="pending"
+            val reference=sale.optString("reference").ifBlank { sale.optString("receipt_number",tr("Pending sync")) }
+            tableRow(table,listOf(reference+if(pending) "\n${tr("Pending sync")}" else "",sale.optString("buyer_name"),displayTime(sale.optString("completed_at")),sale.optString("cashier_name"),money(sale.optLong("grand_total")),tr("View"))) {
+                if(pending) orderDetail(obj("sale" to sale,"items" to sale.getJSONArray("items")))
                 else work({ repo.cached(repo.path("sales/${sale.getString("id")}"),JSONObject()) as JSONObject }) { detail -> orderDetail(detail) }
             }
         }
+        if(sales.isEmpty()) emptyState(list,"history","No orders yet","Completed sales will appear here.")
         if(offset>0) button(list,"Previous") { body.removeAllViews(); ordersScreen(trash,(offset-50).coerceAtLeast(0)) }
         if(remote.size==50) button(list,"Load more orders") { body.removeAllViews(); ordersScreen(trash,offset+50) }
     }

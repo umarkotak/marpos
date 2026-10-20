@@ -13,10 +13,16 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 private val imageExecutor=Executors.newFixedThreadPool(2)
-fun MainActivity.productImage(parent: LinearLayout,product: JSONObject) {
+fun MainActivity.productImage(parent: LinearLayout,product: JSONObject,compact: Boolean=false) {
+    val frame=android.widget.FrameLayout(this).apply { background=surface(android.graphics.Color.rgb(230,244,236),9,null); clipToOutline=true }
+    parent.addView(frame,LinearLayout.LayoutParams(if(compact) dp(64) else -1,dp(if(compact) 64 else 120)))
+    frame.addView(android.widget.TextView(this).apply {
+        text=product.optString("name").take(1).uppercase(); textSize=if(compact) 24f else 38f
+        gravity=android.view.Gravity.CENTER; setTextColor(WebUi.primary); typeface=android.graphics.Typeface.DEFAULT_BOLD
+    },android.widget.FrameLayout.LayoutParams(-1,-1))
     val path=product.optJSONArray("image_urls")?.optString(0) ?: return
     if(!path.startsWith("/backend/images/${repo.store}/") || !Regex("/backend/images/[a-f0-9-]+/[a-f0-9-]+\\.avif").matches(path)) return
-    val view=ImageView(this).apply { contentDescription=product.optString("name"); scaleType=ImageView.ScaleType.CENTER_INSIDE; parent.addView(this,LinearLayout.LayoutParams(-1,dp(120))) }
+    val view=ImageView(this).apply { contentDescription=product.optString("name"); scaleType=ImageView.ScaleType.CENTER_CROP; frame.addView(this,android.widget.FrameLayout.LayoutParams(-1,-1)) }
     val base=repo.api.base
     val imageFile=File(filesDir,"images/${base.hashCode()}/${path.substringAfter("/backend/images/")}")
     imageExecutor.execute {
@@ -48,30 +54,46 @@ fun java.io.InputStream.readBytesLimited(limit: Int): ByteArray {
     return out.toByteArray()
 }
 fun MainActivity.productsScreen(trash: Boolean=false) {
-    heading(body,if(trash) "Deleted products" else "Products")
+    pageHeading(body,"Catalog",if(trash) "Deleted products" else "Products",if(trash) "Restore products for this store." else "Set prices and add-on choices for this store.")
     val actions=row(body)
     if(repo.edit && !trash) button(actions,"New product",true) { productEditor(null) }
     if(repo.superadmin) button(actions,if(trash) "Active products" else "Deleted products") { body.removeAllViews(); productsScreen(!trash) }
-    val search=input(body,"Search products")
-    val categories=listOf("All")+repo.products().map { it.optString("category","lainnya") }.distinct().sorted()
-    val category=select(body,"Category",categories)
+    val controls=grid(body,220,3)
+    val searchCell=column(); controls.addView(searchCell)
+    val search=input(searchCell,"Search products")
+    val categories=listOf("All categories")+repo.products().map { it.optString("category","lainnya") }.distinct().sorted()
+    val categoryCell=column(); controls.addView(categoryCell)
+    val category=select(categoryCell,"Category",categories)
     val sorts=listOf("Name","Price: low to high","Price: high to low")
-    val sort=select(body,"Sort",sorts)
-    val list=column(body)
+    val sortCell=column(); controls.addView(sortCell)
+    val sort=select(sortCell,"Sort by",sorts)
+    val list=column(body).apply { background=surface(android.graphics.Color.WHITE,14); clipToOutline=true }
     fun show(products: List<JSONObject>) {
         list.removeAllViews()
-        products.filter { (it.optString("name")+" "+it.optString("sku")+" "+it.optString("category")).contains(search.value(),true) && (category.selectedItemPosition==0 || it.optString("category")==categories[category.selectedItemPosition]) }.let { rows -> when(sort.selectedItemPosition) { 1->rows.sortedBy { it.getLong("price") }; 2->rows.sortedByDescending { it.getLong("price") }; else->rows.sortedBy { it.optString("name") } } }.forEach { product ->
-            val c=card(list); productImage(c,product); text(c,product.getString("name"),20f,true); text(c,"${product.getString("sku")} · ${product.optString("category")}",13f); text(c,money(product.getLong("price")))
-            if(product.optString("description").isNotEmpty()) text(c,product.getString("description"))
-            product.rows("cost_breakdown").forEach { text(c,"${it.optString("name")}: ${money(it.optLong("amount"))}",13f) }
-            product.rows("addon_groups").forEach { group -> text(c,group.getString("name")+": "+group.rows("options").joinToString { it.getString("name") },13f) }
+        val visible=products.filter { (it.optString("name")+" "+it.optString("sku")+" "+it.optString("category")).contains(search.value(),true) && (category.selectedItemPosition==0 || it.optString("category")==categories[category.selectedItemPosition]) }.let { rows -> when(sort.selectedItemPosition) { 1->rows.sortedBy { it.getLong("price") }; 2->rows.sortedByDescending { it.getLong("price") }; else->rows.sortedBy { it.optString("name") } } }
+        val count=row(list).apply { setPadding(dp(22),dp(12),dp(22),dp(12)) }
+        val result=text(count,"${visible.size} / ${products.size} ${tr("Products")}",13f,true); weight(result,count)
+        caption(count,"Prices in IDR")
+        divider(list)
+        visible.forEach { product ->
+            val c=column(list).apply { setPadding(dp(if(tablet) 22 else 13),dp(15),dp(if(tablet) 22 else 13),dp(15)) }
+            val r=row(c).apply { gravity=android.view.Gravity.CENTER_VERTICAL }
+            productImage(r,product,true)
+            val info=column(r).apply { setPadding(dp(14),0,dp(10),0) }; weight(info,r)
+            text(info,product.getString("name"),15f,true)
+            caption(info,"${product.getString("sku")} · ${product.optString("category")}")
+            if(product.optString("description").isNotEmpty()) caption(info,product.getString("description"))
+            text(info,money(product.getLong("price")),14f,true).setTextColor(WebUi.primary)
             if(repo.edit) {
-                if(!trash) button(c,"Edit product") { productEditor(product) }
-                if(!trash || repo.superadmin) button(c,if(trash) "Restore" else "Delete") {
+                val actions=if(tablet) column(r).apply { layoutParams=LinearLayout.LayoutParams(dp(130),-2) } else row(c)
+                if(!trash) button(actions,"Edit product") { productEditor(product) }
+                if(!trash || repo.superadmin) button(actions,if(trash) "Restore" else "Delete") {
                     confirm(if(trash) "Restore this product?" else "Delete this product?") { mutate(repo.path("products/${product.getString("id")}${if(trash) "/restore" else ""}"),if(trash) "POST" else "DELETE",done={ work({ repo.refreshCatalog() }) { render() } }) }
                 }
             }
+            divider(list)
         }
+        if(visible.isEmpty()) emptyState(list,"package","No matching products","Try another name or SKU.")
     }
     var products=repo.products(); show(products)
     changed(search) { show(products) }

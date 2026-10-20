@@ -5,64 +5,175 @@ import android.widget.LinearLayout
 import org.json.JSONArray
 import org.json.JSONObject
 
-fun MainActivity.posScreen() {
-    heading(body,"Point of sale")
-    val draft=repo.draft()
-    val actions=row(body)
-    button(actions,"Products") { catalogPicker { line -> val d=repo.draft(); d.getJSONArray("items").put(line); repo.saveDraft(d); render() } }
-    button(actions,"Add ad hoc product") { adHoc() }
-    val held=row(body)
-    button(held,"Hold and start new") { repo.startDraft(); render() }
-    button(held,"Held orders") {
-        val drafts=repo.workspace().rows("drafts")
-        AlertDialog.Builder(this).setTitle(tr("Held orders")).setItems(drafts.map { "${it.optString("buyer_name","Guest")} · ${it.rows("items").size} ${tr("Items")}" }.toTypedArray()) { _,index -> repo.resumeDraft(drafts[index].getString("id")); render() }.show()
-    }
-    val buyer=card(body)
-    text(buyer,"Buyer details",18f,true)
-    listOf("buyer_name" to "Buyer name","buyer_phone" to "Buyer phone","buyer_email" to "Buyer email").forEach { (key,label) ->
-        val field=input(buyer,label,draft.optString(key)); changed(field) { val d=repo.draft(); d.put(key,field.value()); repo.saveDraft(d) }
-    }
-    draft.rows("items").forEach { item ->
-        val c=card(body)
-        text(c,item.getString("product_name"),18f,true)
-        if(item.optString("product_description").isNotBlank()) text(c,item.getString("product_description"),13f)
-        item.rows("addons").forEach { text(c,"+ ${it.getString("option_name")} · ${money(it.getLong("price_delta"))}",13f) }
-        text(c,"${item.getLong("quantity")} × ${money(item.getLong("unit_price"))} = ${money(item.getLong("line_total"))}")
-        if(item.optLong("discount_total")>0) text(c,"${tr("Discount")}: −${money(item.getLong("discount_total"))}")
-        val buttons=row(c)
-        button(buttons,"Edit item") { editLine(item) { next -> val d=repo.draft(); d.put("items",d.rows("items").map { if(it.getString("id")==next.getString("id")) next else it }.array()); repo.saveDraft(d); render() } }
-        button(buttons,"Remove") { confirm("Remove this item?") { val d=repo.draft(); d.put("items",d.rows("items").filter { it.getString("id")!=item.getString("id") }.array()); repo.saveDraft(d); render() } }
-    }
-    val summary=card(body)
-    val tax=check(summary,"Add tax",draft.optBoolean("tax_on",true))
-    tax.setOnCheckedChangeListener { _,checked -> safe { val d=repo.draft(); d.put("tax_on",checked); repo.saveDraft(d); render() } }
-    val totals=totals(draft.rows("items"),draft.optBoolean("tax_on",true),taxRate(repo.auth!!.optString("tax_percentage","0")))
-    text(summary,"${tr("Subtotal")}: ${money(totals.getLong("subtotal"))}")
-    text(summary,"${tr("Tax")} (${repo.auth!!.optString("tax_percentage")} %): ${money(totals.getLong("tax_total"))}")
-    text(summary,"${tr("Total")}: ${money(totals.getLong("grand_total"))}",22f,true)
-    val methods=listOf("cash","qris","unpaid")
-    val payment=select(summary,"Payment method note",listOf("Tunai","QRIS","Piutang"),when(draft.optString("payment_method_note")){ "qris"->"QRIS"; "unpaid"->"Piutang";else->"Tunai" })
-    payment.onItemSelectedListener=object: android.widget.AdapterView.OnItemSelectedListener {
-        override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-        override fun onItemSelected(parent: android.widget.AdapterView<*>?,view: android.view.View?,position: Int,id: Long) {
-            safe { val current=repo.draft(); if(current.getString("id")==draft.getString("id")) repo.saveDraft(current.put("payment_method_note",methods[position])) }
-        }
-    }
-    button(summary,"Review sale",true) {
-        val d=repo.draft().put("payment_method_note",methods[payment.selectedItemPosition]); repo.saveDraft(d)
-        val sale=repo.sale(d)
-        dialog("Review sale") { content,dialog ->
-            receiptSummary(content,sale,sale.rows("items"))
-            text(content,"This records payment handled outside Marpos. It does not process a payment.",13f)
-            button(content,"Print receipt") { printReceipt(obj("sale" to sale.copy().put("reference",tr("Draft receipt")),"items" to sale.getJSONArray("items"))) }
-            button(content,"Complete sale",true) {
-                repo.checkout(sale); dialog.dismiss(); render()
-                notice("Sale saved on this device. Sync will retry when the server returns.")
-                retrySyncAfterSale()
+fun MainActivity.posScreen(host: android.widget.FrameLayout) {
+    val layout=column()
+    host.addView(layout,android.widget.FrameLayout.LayoutParams(-1,-1))
+    val panels=row(layout); weight(panels,layout)
+    val catalogScroll=android.widget.ScrollView(this).apply { isFillViewport=true }
+    val cart=column().apply { setBackgroundColor(android.graphics.Color.WHITE) }
+    if(!tablet) {
+        val tabs=row(layout).apply { setPadding(dp(14),dp(4),dp(14),dp(4)); setBackgroundColor(android.graphics.Color.WHITE) }
+        layout.removeView(tabs); layout.addView(tabs,0)
+        listOf("catalog" to "Products","order" to "Current order").forEach { (panel,label) ->
+            button(tabs,label) { mobilePanel=panel; render() }.apply {
+                background=touchSurface(if(mobilePanel==panel) WebUi.secondary else android.graphics.Color.TRANSPARENT,8,null)
             }
         }
-    }.isEnabled=draft.rows("items").isNotEmpty()
-    button(body,"Discard this unfinished order") { confirm("Discard this unfinished order?") { repo.discardDraft(draft.getString("id")); render() } }
+    }
+    panels.addView(catalogScroll,LinearLayout.LayoutParams(0,-1,1f))
+    panels.addView(cart,LinearLayout.LayoutParams(if(tablet) dp(if(resources.configuration.screenWidthDp<=1050) 310 else 390) else -1,-1))
+    catalogScroll.visibility=if(tablet || mobilePanel=="catalog") android.view.View.VISIBLE else android.view.View.GONE
+    cart.visibility=if(tablet || mobilePanel=="order") android.view.View.VISIBLE else android.view.View.GONE
+    val catalog=column().apply { setPadding(dp(if(tablet && resources.configuration.screenWidthDp>1050) 31 else 16),dp(if(tablet) 24 else 20),dp(16),dp(24)) }
+    catalogScroll.addView(catalog); body=catalog
+    pageHeading(catalog,"Checkout","Point of sale","Choose products to start a sale.")
+    button(catalog,"+ " + tr("Add ad hoc product")) { adHoc() }.layoutParams=LinearLayout.LayoutParams(-2,-2).apply { bottomMargin=dp(12) }
+    val search=input(catalog,"Search products",catalogSearch).apply { hint=tr("Name or SKU") }
+    val products=column(catalog)
+    fun drawCatalog() {
+        products.removeAllViews()
+        val filtered=repo.products().filter { (it.optString("name")+" "+it.optString("sku")).contains(catalogSearch,true) }.sortedBy { it.optString("name") }
+        filtered.groupBy { it.optString("category","lainnya").ifBlank { "lainnya" } }.toSortedMap().forEach { (category,rows) ->
+            text(products,category.replaceFirstChar { it.uppercase() },17f,true)
+            val grid=grid(products,forceTwo=resources.configuration.screenWidthDp<=650)
+            rows.forEach { product ->
+                val c=column().apply {
+                    setPadding(dp(14),dp(14),dp(14),dp(14)); background=touchSurface(android.graphics.Color.WHITE,13)
+                    minimumHeight=dp(220); isFocusable=true; contentDescription="${product.optString("name")}, ${money(product.optLong("price"))}"
+                    setOnClickListener { if(!isWorking) safe { chooseAddons(product) { addons ->
+                        val draft=repo.draft(); draft.getJSONArray("items").put(repo.line(product,addons)); repo.saveDraft(draft); drawCart(cart)
+                    } } }
+                }
+                productImage(c,product)
+                text(c,product.optString("name"),15f,true)
+                text(c,money(product.optLong("price")),14f,true).setTextColor(WebUi.primary)
+                if(product.rows("addon_groups").isNotEmpty()) caption(c,"Add-ons available")
+                grid.addView(c)
+            }
+        }
+        if(filtered.isEmpty()) emptyState(products,"package",if(repo.products().isEmpty()) "No products yet" else "No matching products",if(repo.products().isEmpty()) "Add an ad hoc product to start." else "Try another name or SKU.")
+    }
+    changed(search) { catalogSearch=search.value(); drawCatalog() }
+    drawCatalog(); drawCart(cart)
+}
+
+fun MainActivity.drawCart(cart: LinearLayout) {
+    cart.removeAllViews()
+    val draft=repo.draft()
+    val items=draft.rows("items")
+    val header=column(cart).apply { setPadding(dp(16),dp(12),dp(16),dp(10)) }
+    val title=row(header).apply { gravity=android.view.Gravity.CENTER_VERTICAL }
+    val titleCopy=column(title); weight(titleCopy,title)
+    text(titleCopy,"${tr("Orders")} ${repo.workspace().rows("drafts").size}",16f,true)
+    caption(titleCopy,"${items.size} ${tr("Items")} · ${tr("Saved on this device")}").textSize=11f
+    val newOrder=button(title,"+ " + tr("New order")) { repo.startDraft(); drawCart(cart) }
+    newOrder.layoutParams=LinearLayout.LayoutParams(-2,-2); newOrder.textSize=12f
+    val heldScroll=android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false }
+    header.addView(heldScroll,LinearLayout.LayoutParams(-1,-2))
+    val held=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }; heldScroll.addView(held)
+    repo.workspace().rows("drafts").forEachIndexed { index,order ->
+        val chip=column().apply {
+            background=surface(if(order.getString("id")==draft.getString("id")) WebUi.secondary else android.graphics.Color.WHITE,8)
+            setPadding(dp(8),0,dp(4),0)
+        }
+        held.addView(chip,LinearLayout.LayoutParams(dp(140),-2).apply { marginEnd=dp(6); topMargin=dp(8) })
+        val r=row(chip)
+        val choose=button(r,"${tr("Order")} ${index+1}") { repo.resumeDraft(order.getString("id")); drawCart(cart) }
+        choose.background=touchSurface(android.graphics.Color.TRANSPARENT,6,null); choose.textSize=12f
+        iconButton(r,"close","Discard this unfinished order") { confirm("Discard this unfinished order?") { repo.discardDraft(order.getString("id")); drawCart(cart) } }
+        caption(chip,"${order.optString("buyer_name")} · ${order.rows("items").size} ${tr("Items")}").apply { textSize=11f; maxLines=1 }
+    }
+    divider(cart)
+    val buyer=row(cart).apply { gravity=android.view.Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(4),dp(12),dp(4)); background=touchSurface(android.graphics.Color.WHITE,0,null); isFocusable=true
+        contentDescription=tr("Buyer details"); setOnClickListener { if(!isWorking) buyerEditor { drawCart(cart) } }
+    }
+    val buyerCopy=column(buyer); weight(buyerCopy,buyer)
+    caption(buyerCopy,"Buyer details").apply { textSize=11f; setPadding(0,dp(6),0,dp(3)) }
+    text(buyerCopy,listOf("buyer_name","buyer_phone","buyer_email").map { draft.optString(it) }.firstOrNull { it.isNotBlank() } ?: tr("Add buyer details"),13f,true)
+    buyer.addView(UiIcon(this,"edit"),LinearLayout.LayoutParams(dp(17),dp(17)))
+    divider(cart)
+    val scroll=android.widget.ScrollView(this).apply { isFillViewport=true }
+    cart.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+    val lines=column().apply { setPadding(dp(20),dp(8),dp(20),dp(8)) }; scroll.addView(lines)
+    if(items.isEmpty()) emptyState(lines,"cart","No items yet","Choose a product to add it here.")
+    items.forEach { item ->
+        val c=column(lines)
+        val head=row(c).apply { gravity=android.view.Gravity.CENTER_VERTICAL }
+        val name=text(head,item.getString("product_name"),14f,true); weight(name,head)
+        iconButton(head,"more","Edit item") { editLine(item) { next ->
+            val current=repo.draft(); current.put("items",current.rows("items").map { if(it.getString("id")==next.getString("id")) next else it }.array()); repo.saveDraft(current); drawCart(cart)
+        } }
+        fun remove() { val current=repo.draft(); current.put("items",current.rows("items").filter { it.getString("id")!=item.getString("id") }.array()); repo.saveDraft(current); drawCart(cart) }
+        iconButton(head,"close","Remove item") { remove() }
+        if(item.optString("product_description").isNotBlank()) caption(c,item.getString("product_description"))
+        item.rows("addons").forEach { caption(c,"+ ${it.optString("option_name")} (${money(it.optLong("price_delta"))})") }
+        if(item.optLong("discount_total")>0) caption(c,"${tr("Discount")}: −${money(item.optLong("discount_total"))}")
+        val foot=row(c).apply { gravity=android.view.Gravity.CENTER_VERTICAL }
+        fun change(delta: Int) {
+            if(item.optLong("quantity")+delta<=0) { remove(); return }
+            val next=priceLine(item.copy().put("quantity",item.optLong("quantity")+delta))
+            val current=repo.draft(); current.put("items",current.rows("items").map { if(it.getString("id")==next.getString("id")) next else it }.array()); repo.saveDraft(current); drawCart(cart)
+        }
+        iconButton(foot,"minus","Decrease quantity") { change(-1) }
+        text(foot,item.optLong("quantity").toString(),13f,true)
+        iconButton(foot,"plus","Increase quantity") { change(1) }
+        val price=text(foot,money(item.optLong("line_total")),14f,true).apply { gravity=android.view.Gravity.END; setTextColor(WebUi.primary) }; weight(price,foot)
+        divider(c)
+    }
+    divider(cart)
+    val summary=column(cart).apply { setPadding(dp(20),dp(8),dp(20),dp(16)) }
+    val totals=totals(items,draft.optBoolean("tax_on",true),taxRate(repo.auth!!.optString("tax_percentage","0")))
+    val discount=totals.optLong("discount_total")
+    if(discount>0) {
+        totalRow(summary,"Subtotal before discount",money(totals.getLong("subtotal")+discount))
+        totalRow(summary,"Discount","−"+money(discount))
+    }
+    totalRow(summary,"Subtotal",money(totals.getLong("subtotal")))
+    val tax=check(summary,"${tr("Add tax")} (${repo.auth!!.optString("tax_percentage","0")}%)",draft.optBoolean("tax_on",true))
+    tax.setOnCheckedChangeListener { _,checked -> safe { repo.saveDraft(repo.draft().put("tax_on",checked)); drawCart(cart) } }
+    totalRow(summary,"Tax",money(totals.getLong("tax_total")))
+    totalRow(summary,"Total",money(totals.getLong("grand_total")),true)
+    button(summary,"${tr("Review sale")}    ${money(totals.getLong("grand_total"))}",true) { reviewSale() }.apply {
+        contentDescription=tr("Review sale"); isEnabled=items.isNotEmpty()
+    }
+}
+
+fun MainActivity.buyerEditor(done: () -> Unit) {
+    val draft=repo.draft()
+    dialog("Buyer details") { content,dialog ->
+        val fields=listOf("buyer_name" to "Buyer name","buyer_phone" to "Buyer phone","buyer_email" to "Buyer email").associate { (key,label) -> key to input(content,label,draft.optString(key)) }
+        button(content,"Save",true) {
+            val current=repo.draft(); require(current.getString("id")==draft.getString("id")) { "The active draft changed. Reload the order before editing." }
+            fields.forEach { (key,field) -> current.put(key,field.value()) }; repo.saveDraft(current); dialog.dismiss(); done()
+        }
+    }
+}
+fun MainActivity.reviewSale() {
+    val draft=repo.draft()
+    val draftId=draft.getString("id")
+    val sale=repo.sale(draft)
+    if(sale.optString("payment_method_note").isBlank()) sale.put("payment_method_note","cash")
+    dialog("Review sale") { content,dialog ->
+        receiptSummary(content,sale,sale.rows("items"))
+        text(content,"Payment method note",13f,true)
+        val options=android.widget.RadioGroup(this).apply { orientation=LinearLayout.HORIZONTAL }; content.addView(options)
+        listOf("unpaid" to "Piutang","qris" to "QRIS","cash" to "Tunai").forEach { (key,label) ->
+            val radio=android.widget.RadioButton(this).apply { id=android.view.View.generateViewId(); text=label; textSize=13f; minHeight=dp(48); buttonTintList=android.content.res.ColorStateList.valueOf(WebUi.primary) }
+            options.addView(radio,LinearLayout.LayoutParams(0,-2,1f))
+            radio.isChecked=sale.optString("payment_method_note","cash")==key
+            radio.setOnCheckedChangeListener { _,checked -> if(checked) safe {
+                val current=repo.draft()
+                require(current.getString("id")==draftId) { "The active draft changed. Review the sale again." }
+                repo.saveDraft(current.put("payment_method_note",key)); sale.put("payment_method_note",key)
+            } }
+        }
+        caption(content,"This records payment handled outside Marpos. It does not process a payment.")
+        button(content,"Print receipt") { printReceipt(obj("sale" to sale.copy().put("reference",tr("Draft receipt")),"items" to sale.getJSONArray("items"))) }
+        button(content,"Complete sale",true) {
+            repo.checkout(sale,draftId); dialog.dismiss(); mobilePanel="catalog"; render()
+            notice("Sale saved on this device. Sync will retry when the server returns."); retrySyncAfterSale()
+        }
+    }
 }
 
 fun MainActivity.retrySyncAfterSale() { retrySync() }

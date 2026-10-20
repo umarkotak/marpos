@@ -38,12 +38,36 @@ fun MainActivity.syncScreen() {
 }
 
 fun MainActivity.settingsScreen() {
-    heading(body,"Store settings")
+    pageHeading(body,"Store","Store settings")
     val session=repo.auth!!
-    val c=card(body)
-    val fields=listOf("name" to "Store name","slug" to "Store slug","address" to "Address","google_maps_url" to "Google Maps URL","instagram_url" to "Instagram URL","facebook_url" to "Facebook URL","tiktok_url" to "TikTok URL").associate { (key,label) -> key to input(c,label,if(key=="name") session.optString("store_name") else session.optString(key)) }
-    val tax=input(c,"Tax percentage",session.optString("tax_percentage","0"),true)
-    button(c,"Save store settings",true) {
+    val c=column(body).apply { background=surface(android.graphics.Color.WHITE,16); clipToOutline=true }
+    val profile=row(c).apply { gravity=android.view.Gravity.CENTER_VERTICAL; setPadding(dp(24),dp(20),dp(24),dp(20)); setBackgroundColor(android.graphics.Color.rgb(244,250,247)) }
+    text(profile,session.optString("store_name").take(1).uppercase(),23f,true).apply {
+        gravity=android.view.Gravity.CENTER; background=surface(android.graphics.Color.rgb(220,239,229),14,null)
+        layoutParams=android.widget.LinearLayout.LayoutParams(dp(52),dp(52)); setTextColor(WebUi.primary)
+    }
+    val copy=column(profile).apply { setPadding(dp(16),0,0,0) }; weight(copy,profile)
+    caption(copy,"Active store").setTextColor(WebUi.primary)
+    text(copy,session.optString("store_name"),20f,true)
+    caption(copy,"Manage this store's details and checkout tax.")
+    divider(c)
+    val identity=settingsSection(c,"01 / STORE","Store identity","Set the name and slug for this store.")
+    val fields=mutableMapOf<String,android.widget.EditText>()
+    fields["name"]=input(identity,"Store name",session.optString("store_name"))
+    fields["slug"]=input(identity,"Slug",session.optString("slug"))
+    divider(c)
+    val location=settingsSection(c,"02 / LOCATION","Location","Add the address and Google Maps link for this store.")
+    fields["address"]=input(location,"Street address",session.optString("address")).apply { setSingleLine(false); minLines=3; layoutParams.height=dp(82) }
+    fields["google_maps_url"]=input(location,"Google Maps URL",session.optString("google_maps_url"))
+    divider(c)
+    val social=settingsSection(c,"03 / SOCIAL","Social links","Show customers where to find your store.")
+    listOf("instagram_url" to "Instagram URL","facebook_url" to "Facebook URL","tiktok_url" to "TikTok URL").forEach { (key,label) -> fields[key]=input(social,label,session.optString(key)) }
+    divider(c)
+    val checkout=settingsSection(c,"04 / CHECKOUT","Tax","Tax is added by default. The cashier can turn it off for one sale.")
+    val tax=input(checkout,"Tax percentage",session.optString("tax_percentage","0"),true)
+    divider(c)
+    val actions=column(c).apply { setPadding(dp(24),dp(14),dp(24),dp(14)) }
+    button(actions,"Save store settings",true) {
         val data=obj("tax_percentage" to taxRate(tax.value()))
         fields.forEach { (key,field)->data.put(key,field.value()) }
         work({

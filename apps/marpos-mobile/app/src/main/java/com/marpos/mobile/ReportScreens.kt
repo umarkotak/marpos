@@ -43,15 +43,19 @@ fun MainActivity.reportData(from: String,to: String): JSONObject {
     return obj("hours" to hours.filter { it.optString("date") in from..to }.array(),"products" to products.filter { it.optString("date") in from..to }.array())
 }
 fun MainActivity.reportsScreen(from: String=LocalDate.now(wib).minusDays(29).toString(),to: String=today(),comparison: Boolean=false,metric: String="revenue") {
-    heading(body,"Reports")
+    pageHeading(body,"Store performance","Reports","Understand earnings, product demand, and daily sales patterns.")
     val tabs=row(body)
     button(tabs,"Overview") { body.removeAllViews(); reportsScreen(from,to,false,metric) }
     button(tabs,"Comparison") { body.removeAllViews(); reportsScreen(from,to,true,metric) }
-    val filter=card(body); val first=input(filter,"From (YYYY-MM-DD)",from); val last=input(filter,"To (YYYY-MM-DD)",to)
-    val metrics=listOf("revenue","net","units","orders","expense"); val mode=select(filter,"Metric",metrics,metric)
-    val days=input(filter,"Last X days","30",true)
-    button(filter,"Last X days") { val count=days.value().toLongOrNull() ?: 0; require(count in 1..366); body.removeAllViews(); reportsScreen(LocalDate.now(wib).minusDays(count-1).toString(),today(),comparison,metrics[mode.selectedItemPosition]) }
-    button(filter,"Apply") { validateRange(first.value(),last.value()); body.removeAllViews(); reportsScreen(first.value(),last.value(),comparison,metrics[mode.selectedItemPosition]) }
+    val filter=grid(body,200,4)
+    val startCell=column(); filter.addView(startCell); val first=input(startCell,"From (YYYY-MM-DD)",from)
+    val endCell=column(); filter.addView(endCell); val last=input(endCell,"To (YYYY-MM-DD)",to)
+    val metrics=listOf("revenue","net","units","orders","expense")
+    val metricCell=column(); filter.addView(metricCell); val mode=select(metricCell,"Metric",metrics,metric)
+    val daysCell=column(); filter.addView(daysCell); val days=input(daysCell,"Last X days","30",true)
+    val actions=row(body)
+    button(actions,"Last X days") { val count=days.value().toLongOrNull() ?: 0; require(count in 1..366); body.removeAllViews(); reportsScreen(LocalDate.now(wib).minusDays(count-1).toString(),today(),comparison,metrics[mode.selectedItemPosition]) }
+    button(actions,"Apply",true) { validateRange(first.value(),last.value()); body.removeAllViews(); reportsScreen(first.value(),last.value(),comparison,metrics[mode.selectedItemPosition]) }
     val list=column(body)
     val end=LocalDate.parse(to)
     val comparisonStart=end.minusDays((end.dayOfWeek.value-1).toLong()).minusWeeks(3)
@@ -84,15 +88,20 @@ fun MainActivity.reportsScreen(from: String=LocalDate.now(wib).minusDays(29).toS
 }
 fun MainActivity.reportValue(row: JSONObject,metric: String): String = if(metric=="net" && row.optLong("missing_costs")>0) tr("Incomplete") else if(metric in listOf("units","orders")) row.optLong(metric).toString() else money(row.optLong(metric))
 fun MainActivity.reportSummary(parent: LinearLayout,row: JSONObject) {
-    val c=card(parent)
-    text(c,"${tr("Sales before tax")}: ${money(row.optLong("revenue"))}",20f,true)
-    text(c,"${tr("Net earnings")}: ${reportValue(row,"net")}",20f,true)
-    text(c,"${tr("Orders")}: ${row.optLong("orders")} · ${tr("Units sold")}: ${row.optLong("units")}")
-    text(c,"${tr("Tax")}: ${money(row.optLong("tax"))}")
-    text(c,"${tr("Costs")}: ${if(row.optLong("missing_costs")>0) tr("Incomplete") else money(row.optLong("cost"))}")
-    text(c,"${tr("Income")}: ${money(row.optLong("income"))} · ${tr("Expenses")}: ${money(row.optLong("expense"))}")
-    val count=row.optLong("orders"); text(c,"${tr("Average order value")}: ${money(if(count>0) kotlin.math.round(row.optLong("revenue").toDouble()/count).toLong() else 0)}")
-    val revenue=row.optLong("revenue"); if(revenue>0 && row.optLong("missing_costs")==0L) text(c,"${tr("Gross margin")}: ${"%.1f".format(100.0*(revenue-row.optLong("cost"))/revenue)}%")
+    val cards=grid(parent,170,4)
+    listOf("Sales before tax" to money(row.optLong("revenue")),"Net earnings" to reportValue(row,"net"),"Units sold" to row.optLong("units").toString(),"Orders" to row.optLong("orders").toString()).forEachIndexed { index,(label,value) ->
+        val featured=index==1
+        val c=column().apply { background=surface(if(featured) android.graphics.Color.rgb(18,62,48) else Color.WHITE,12); setPadding(dp(20),dp(18),dp(20),dp(18)) }
+        cards.addView(c)
+        caption(c,label).apply { if(featured) setTextColor(Color.rgb(190,216,204)) }
+        text(c,value,20f,true).apply { if(featured) setTextColor(Color.WHITE) }
+    }
+    val strip=grid(parent,150,4)
+    listOf("Tax" to money(row.optLong("tax")),"Costs" to if(row.optLong("missing_costs")>0) tr("Incomplete") else money(row.optLong("cost")),"Income" to money(row.optLong("income")),"Expenses" to money(row.optLong("expense"))).forEach { (label,value) ->
+        val c=column(); strip.addView(c); caption(c,label); text(c,value,13f,true)
+    }
+    val count=row.optLong("orders"); caption(parent,"${tr("Average order value")}: ${money(if(count>0) kotlin.math.round(row.optLong("revenue").toDouble()/count).toLong() else 0)}")
+    val revenue=row.optLong("revenue"); if(revenue>0 && row.optLong("missing_costs")==0L) caption(parent,"${tr("Gross margin")}: ${"%.1f".format(100.0*(revenue-row.optLong("cost"))/revenue)}%")
 }
 fun MainActivity.productSales(parent: LinearLayout,products: List<JSONObject>) {
     text(parent,"Products sold",20f,true)
@@ -134,6 +143,6 @@ private class ReportChart @JvmOverloads constructor(context: Context,val rows: L
         val negative=rows.any { it.second<0 }; val baseline=if(negative) height*.5f else height-28f; val scale=if(negative) height*.4f else height*.8f
         paint.color=Color.LTGRAY; paint.strokeWidth=2f; canvas.drawLine(0f,baseline,width.toFloat(),baseline,paint)
         rows.forEachIndexed { index,(_,value) -> val y=baseline-(value/max*scale).toFloat(); paint.color=if(value<0) Color.rgb(181,65,54) else color; canvas.drawRect(index*step+1,minOf(y,baseline),(index+1)*step-1,maxOf(y,baseline)+1,paint) }
-        paint.color=Color.DKGRAY; paint.textSize=24f; canvas.drawText(rows.first().first,0f,height-3f,paint); val last=rows.last().first; canvas.drawText(last,(width-paint.measureText(last)).coerceAtLeast(0f),height-3f,paint)
+        paint.color=Color.DKGRAY; paint.textSize=android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,11f,resources.displayMetrics); canvas.drawText(rows.first().first,0f,height-3f,paint); val last=rows.last().first; canvas.drawText(last,(width-paint.measureText(last)).coerceAtLeast(0f),height-3f,paint)
     }
 }

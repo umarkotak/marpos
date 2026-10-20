@@ -140,10 +140,12 @@ class Repository(context: Context, val api: Api) {
         listOf("buyer_name","buyer_phone","buyer_email","payment_method_note").forEach { sale.put(it,draft.optString(it)) }
         return sale.put("id",id).put("operation_id",uuid()).put("store_id",store).put("device_id",session.getString("device_id")).put("register_id",session.getString("register_id")).put("cashier_id",user).put("cashier_name",session.getString("name")).put("receipt_number","${session.getString("register_id").take(8)}-$id").put("created_at",timestamp).put("completed_at",timestamp).put("tax_applied",draft.optBoolean("tax_on",true)).put("tax_percentage",rate).put("items",items.array())
     }
-    fun checkout(sale: JSONObject) {
+    fun checkout(sale: JSONObject, draftId: String) {
         requireOfflineAccess()
         require(sale.getString("store_id")==store && sale.getString("cashier_id")==user) { "The selected store or account changed. Review the sale again." }
-        val w=workspace(); val rows=w.rows("drafts").filter { it.getString("id") != w.getString("active_id") }.ifEmpty { listOf(newDraft()) }
+        val w=workspace()
+        require(w.getString("active_id")==draftId && w.rows("drafts").any { it.getString("id")==draftId }) { "The active draft changed. Review the sale again." }
+        val rows=w.rows("drafts").filter { it.getString("id") != draftId }.ifEmpty { listOf(newDraft()) }
         db.queue("sale",sale,store,user,draftKey(),obj("active_id" to rows.first().getString("id"),"drafts" to rows.array()))
     }
     fun pending(): List<JSONObject> {

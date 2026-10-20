@@ -30,7 +30,8 @@ Google ID 1.1.1 remains pinned because 1.2.1 needs Kotlin 2.4 metadata.
 Start the existing Go API and apply its migrations as described in the root
 README. The app calls `/marpos/api` directly. It does not need the Next.js server.
 
-On the sign-in screen, set **API URL** and select **Save server**. For the Android
+On the sign-in screen, open **Server settings**, set **API URL**, and select
+**Save server**. For the Android
 emulator and a local API, use `http://10.0.2.2:6030/marpos/api`. A debug build also
 allows `localhost` and `127.0.0.1` for `adb reverse tcp:6030 tcp:6030`. Other hosts
 and release builds require HTTPS with a valid system-trusted certificate.
@@ -49,12 +50,13 @@ Google sign-in needs your OAuth setup and account for end-to-end verification.
 
 ## Screens
 
-Use the **Marpos** menu to navigate. Permissions follow the current store role.
+Use the sidebar to navigate on tablets. On phones, use the sidebar button in
+the header. Permissions follow the current store role.
 The API also checks each request.
 
 | Screen | Native functionality |
 | --- | --- |
-| Point of sale | Search and category filter, required single or multiple add-ons, quantities, prices, line or per-unit discounts, buyer details, tax toggle, cash/QRIS/Piutang notes, review, receipt, checkout, and held orders. |
+| Point of sale | Search and category groups, required single or multiple add-ons, quantities, prices, line or per-unit discounts, buyer details, tax toggle, cash/QRIS/Piutang notes, review, receipt, checkout, and held orders. |
 | Ad hoc products | Save a product offline and add it to the order. Sync the product before its sales. Use the catalog picker to reuse an existing product. |
 | Products | View products, create and edit products, categories, descriptions, production cost items, add-on groups and options, and up to 10 images. Delete and restore with the required role. |
 | Order history | Paginated orders, local pending sales, details, receipts, buyer repair for older pending sales, corrections, deletion, restoration, and audit history with before/after values. |
@@ -77,6 +79,9 @@ by the API.
 - Drafts are separate for each account and store. Each edit saves in SQLite.
   A completed sale, its pending operation, and the new draft workspace save in
   one SQLite transaction before success is shown.
+- Sale review and payment-note changes use the reviewed draft ID. Checkout
+  rejects a removed or inactive draft. A repeated review cannot remove another
+  unfinished order. Account, store, and role changes close open forms.
 - Sale and operation UUIDs remain the same on retry. Server idempotency prevents
   duplicate sales after a lost acknowledgement.
 - Ad hoc products sync before sales. A sale stays pending if its product fails.
@@ -126,12 +131,77 @@ without creating a sale. A physical printer still needs a hardware check.
   `ReportScreens.kt`, and `ManagementScreens.kt`: Native screens and forms.
 - `Receipt.kt`: Receipt text, Android PDF printing, and RawBT intents.
 
-The native UI follows the web workflows. It uses Android dialogs, navigation,
-and charts; the layout is not a pixel copy of the website.
+## Phone and tablet layout
+
+The native register uses the web app's colors, spacing, rounded controls, Lucide
+icons, navigation order, and English and Indonesian labels. The icon license is
+in `app/src/main/assets/lucide-LICENSE.txt`.
+
+- At 768 dp and wider, the catalog and current order appear beside each other.
+  Each panel scrolls on its own. The order total and checkout action stay visible.
+- Tablets show a persistent sidebar. It starts as an icon rail up to 1050 dp and
+  expands on larger windows. The header button toggles it. Select the store logo
+  to change stores.
+- Narrower windows show **Products** and **Current order** tabs and a navigation
+  drawer. Product cards use two columns on phone screens.
+- Product grids, report cards, filters, and settings sections adapt to the space
+  available. Order history, finance, and audit tables scroll horizontally when
+  needed.
+- Rotation and split-screen changes keep the current draft, catalog search,
+  selected phone panel, and open form fields. Sidebar changes also keep form
+  edits. SQLite remains the source of saved drafts and pending operations.
+
+Google sign-in, image selection, printing, and confirmation dialogs use native
+Android controls. The app does not depend on the Next.js server or a WebView.
+
+`NativeUi.kt` holds the web design tokens and responsive view helpers.
+`AdaptiveShell.kt` holds the header, sidebar, store picker, and navigation drawer.
 
 ## Verification
 
-Checked on an Android emulator with isolated sample data and a local API fixture:
+The 2026-10-20 stability check passed debug and unsigned release builds with
+`./gradlew assembleDebug assembleRelease lintDebug`. Android lint reports no
+issues. No unit tests were created or run.
+
+Direct checks used the Android 36 app, its real SQLite database, and an isolated
+PostgreSQL database served by the Go API. A temporary device driver operated
+native controls and called the app's repository. It is outside the app source
+and is not included in either APK.
+
+- Native checkout saved one sale and one pending operation with two original
+  items, QRIS, and a total of IDR 52,800, including 10% tax.
+- A proxy dropped the Go API's successful sale acknowledgement. The app kept
+  the operation pending. Retry used the same sale and operation IDs. PostgreSQL
+  kept exactly one sale and one `sale.created` operation.
+- The app saved server reference `MP-2026-00001` and cleared the pending entry
+  after acknowledgement. The completed sale survived process restarts.
+- A repeated checkout from the removed draft was rejected after restart.
+  The rejection left the held orders unchanged.
+- Products, order history, finance, reports, audit log, team, store settings,
+  and sync queue opened through native navigation. Rebuilding the shell kept
+  the same settings field and its unsaved text.
+- At 390 dp, the phone's current-order tab opened checkout review. Switching
+  back to products kept the saved draft. These were native-control checks;
+  screenshot and touch acceptance remain separate checks.
+
+These checks used a synthetic session in the isolated API database. They did
+not verify Google account sign-in. Before daily use, verify Google sign-in with
+your HTTPS API, phone and tablet layouts on an accelerated emulator or physical
+device, and a receipt on the selected printer. Release distribution also needs
+your signing certificate.
+
+For the responsive layout update, debug and unsigned release APK builds pass.
+Android lint reports no issues. The landscape tablet register rendered on an
+Android 36 emulator with isolated sample data. The saved draft kept its two
+original items and prices after app restarts and window width changes.
+
+Phone and portrait visual comparison could not be completed. The cloud emulator
+has no hardware acceleration, reports system ANRs, and returns black frames
+after display resizing. Check these layouts on a device or an accelerated
+emulator before claiming pixel parity with the web app. Native Android system
+dialogs also keep their platform appearance.
+
+Earlier workflow checks on an Android emulator with isolated sample data and a local API fixture:
 
 - The first cart edit retained its required add-on.
 - Offline checkout saved one sale and one pending operation, then removed its
@@ -144,7 +214,5 @@ Checked on an Android emulator with isolated sample data and a local API fixture
 - Reports, order history, store settings, and Android receipt print preview opened
   without a runtime crash.
 
-Debug and unsigned release builds pass. Android lint reports no errors and two
-version notices for the pinned Gradle and Google ID versions. No unit tests were
-created or run. Real Google sign-in, the live Go API workflows, physical printing,
-and older Android hardware still need end-to-end acceptance checks.
+Real Google sign-in, physical printing, and older Android hardware still need
+end-to-end acceptance checks.
